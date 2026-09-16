@@ -6,12 +6,18 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 
 本 repository 以原 [GFES 綠色消費循環平台](https://github.com/yue806161/GFES-green_consumption) 為主體，整合 [GreenFin 小農綠色數位融資履歷平台](https://github.com/stoy95536/GreenFin)；兩個上游專案的 Git 歷史均保留於本專案。
 
-## 正式網站與角色入口
+## 公開專案與展示入口
+
+- 合併後公開原始碼：[ossas0001/GFES-GreenFin-Eco-System](https://github.com/ossas0001/GFES-GreenFin-Eco-System)
+
+下列網址是既有 GFES 展示環境，尚未部署本 repository 的完整 GreenFin 合併版本：
 
 - 消費者入口：[https://gfes-green-consumption.pages.dev/](https://gfes-green-consumption.pages.dev/)
 - 合作小農後台：[https://gfes-green-consumption.pages.dev/farmer](https://gfes-green-consumption.pages.dev/farmer)
 - 銀行／政府／企業後台：[https://gfes-green-consumption.pages.dev/institution](https://gfes-green-consumption.pages.dev/institution)
 - 平台管理員後台：[https://gfes-green-consumption.pages.dev/admin](https://gfes-green-consumption.pages.dev/admin)
+
+合併版正式部署所需資源、憑證與安全步驟請見 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
 ## 四種平台角色
 
@@ -69,11 +75,13 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 - 編輯農場故事、上傳耕作與商品圖片，發布最新消息至首頁及相關消費者。
 - 建立商品、調整庫存與兌換點數，管理消費者訂單、修改申請及出貨進度。
 - 建立改善專案、公開募集綠點、提交成果回報。
-- 上傳產銷履歷、無農藥檢測、友善耕作與低碳設備證明。
+- 使用 GreenFin 上傳原始文件，完成 SIMULATED OCR、欄位確認、標準化、來源核驗、異常檢查、綠色經驗值、四大獨立指標與 Data Health。
+- 建立、查看及撤銷對特定機構、資料範圍與期間的 GreenFin 授權。
 - 使用小農綠點兌換農會資源，查看收據、配送或預約履約進度，並可申請修改兌換內容。
 
 ### 銀行／政府／企業
 
+- 在有效小農授權下建立 GreenFin 案件，檢視授信補充資訊並產生完整證據鏈資料包；每次存取均保留稽核紀錄。
 - 建立綠點激勵計畫與永續採購需求。
 - 管理所屬農業資源兌換案件的確認、配送、預約及修改申請。
 - 審核分配給該單位的改善專案成果，彙整專屬 ESG 影響力資料。
@@ -180,5 +188,6 @@ npm run dev
 npm run build
 npm test
 npx tsc --noEmit
-node tests/account-isolation-local.mjs
+npm run lint
+npm run test:security:local
 ```

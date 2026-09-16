@@ -28,6 +28,27 @@
 ### Verification
 
 - `npx tsc --noEmit`: PASS.
-- `npm run lint`: PASS (0 errors, 24 pre-existing non-blocking warnings).
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build includes authorization and bank-case APIs; 34 tests passed, 0 failed).
 - Browser QA: PASS on `/institution?section=greenfin`; navigation, authorization controls, disclosure text and empty-state layout rendered correctly.
+
+## MERGE-09 — Traceability, report and full regression
+
+- Added an institution-only `/api/greenfin/reports` route that rechecks the active authorization before generating a report.
+- Added an evidence-lineage package connecting each authorized result to its calculation trace, rule version, standardized record, OCR fields, verification／anomaly records and original document metadata.
+- Added JSON report download from the institution workspace and recorded both bank access and report generation audit events.
+- Cached the runtime schema bootstrap per D1 binding to prevent concurrent local requests from repeatedly executing the full schema setup.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/reports`; 37 tests passed, 0 failed).
+- `npm run test:security:local`: PASS, including authentication, role isolation, CSRF, ownership, double-spend, duplicate reward, upload validation and session revocation checks.
+
+## MERGE-10 — Public GitHub and deployment handoff
+
+- Confirmed the public repository at `ossas0001/GFES-GreenFin-Eco-System` and pushed all completed merge gates to `main`.
+- Added a Cloudflare deployment handoff that separates the recommended new-resource path from the explicitly approved existing-resource path.
+- Clarified in the README that the existing GFES Pages URL does not yet contain the complete merged release.
+- Verified Wrangler `4.92.0` and a successful deploy dry run; no production resources were changed.

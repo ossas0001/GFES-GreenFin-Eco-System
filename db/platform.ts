@@ -7,6 +7,7 @@ export const FARMER_ID = "farmer-001";
 export const INSTITUTION_ID = "institution-001";
 
 type DbBinding = D1Database;
+const platformSchemaReady = new WeakMap<object, Promise<void>>();
 
 const json = (value: unknown) => JSON.stringify(value ?? {});
 const parse = <T>(value: string | null | undefined, fallback: T): T => {
@@ -26,7 +27,7 @@ async function queryOne<T>(db: DbBinding, statement: string, ...values: unknown[
   return db.prepare(statement).bind(...values).first<T>();
 }
 
-export async function ensurePlatformSchema(db: DbBinding) {
+async function initializePlatformSchema(db: DbBinding) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS profiles (
       id TEXT PRIMARY KEY,
@@ -554,6 +555,19 @@ export async function ensurePlatformSchema(db: DbBinding) {
   await ensureAccountUsernames(db);
   await ensureDefaultAccountCredentials(db);
   await db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_account_controls_username_unique ON account_controls(lower(username)) WHERE username IS NOT NULL").run();
+}
+
+export async function ensurePlatformSchema(db: DbBinding) {
+  const key = db as unknown as object;
+  let ready = platformSchemaReady.get(key);
+  if (!ready) {
+    ready = initializePlatformSchema(db).catch((error) => {
+      platformSchemaReady.delete(key);
+      throw error;
+    });
+    platformSchemaReady.set(key, ready);
+  }
+  await ready;
 }
 
 async function ensureAccountKinds(db: DbBinding) {

@@ -4309,6 +4309,20 @@ function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: stri
     finally { setWorking(false); }
   }
 
+  async function downloadTraceableReport() {
+    if (!detail) return;
+    setWorking(true);
+    try {
+      const response = await fetch("/api/greenfin/reports", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: JSON.stringify({ authorizationId: detail.authorization.id }) });
+      const payload = await response.json() as { reportId?: string; error?: string } & Record<string, unknown>;
+      if (!response.ok || !payload.reportId) throw new Error(payload.error || "產生可追溯資料包失敗");
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+      const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${payload.reportId}.json`; anchor.click(); URL.revokeObjectURL(url);
+      onToast("可追溯資料包已產生，報告事件已寫入稽核紀錄");
+    } catch (error) { onToast(error instanceof Error ? error.message : "產生可追溯資料包失敗"); }
+    finally { setWorking(false); }
+  }
+
   const latestBy = (rows: Array<Record<string, unknown>>, key: string) => [...new Map(rows.map((row) => [String(row[key]), row])).values()];
   const indicators = latestBy(detail?.indicators ?? [], "indicator_type");
   const health = latestBy(detail?.dataHealth ?? [], "domain");
@@ -4321,7 +4335,7 @@ function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: stri
     <Panel className="span-12" title="小農授權清單" note={`${cases.length} 筆與目前機構相關的授權`}>
       {cases.length ? <div className="evidence-list">{cases.map((item) => { const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.start_at).valueOf() <= currentTime && new Date(item.expire_at).valueOf() > currentTime; const scopes = JSON.parse(item.data_scope_json) as string[]; return <article className="evidence-item" key={item.authorization_id}><div><strong>{item.farmer_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・有效至 {item.expire_at.slice(0, 10)}{item.case_number ? `・案件 ${item.case_number}` : ""}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效授權" : item.status === "REVOKED" ? "已撤銷" : "未生效／已到期"}</span><button className="text-button" disabled={!active || working} onClick={() => void openAuthorizedData(item)}>{working && selectedAuthorizationId === item.authorization_id ? "讀取中…" : item.case_id ? "檢視授權資料" : "建立並開啟案件"}</button></div></article>; })}</div> : <p className="empty-copy">目前沒有小農授權給此機構。</p>}
     </Panel>
-    {detail && <><Panel className="span-12" title={detail.farmer?.display_name ?? detail.authorization.farmer_id} note={`${detail.farmer?.city ?? ""}${detail.farmer?.district ?? ""}・授權目的：${detail.authorization.purpose}`}><div className="portfolio-summary"><article><strong>{experienceTotal.toLocaleString()}</strong><span>綠色經驗值</span></article><article><strong>{indicators.length} 項</strong><span>已授權指標</span></article><article><strong>{health.length} 項</strong><span>Data Health 領域</span></article><article><strong>{detail.authorization.scopes.length} 類</strong><span>授權資料範圍</span></article></div></Panel><Panel className="span-6" title="四大分析指標" note="各指標獨立呈現，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}・${String(item.rule_version)}`} done />) : <p className="empty-copy">此授權未包含指標，或尚未計算。</p>}</div></Panel><Panel className="span-6" title="Data Health" note="顯示資料品質狀態與規則版本"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={`${String(item.status)}・${String(item.rule_version)}`} done={item.status === "GREEN"} />) : <p className="empty-copy">此授權未包含 Data Health，或尚未計算。</p>}</div></Panel></>}
+    {detail && <><Panel className="span-12" title={detail.farmer?.display_name ?? detail.authorization.farmer_id} note={`${detail.farmer?.city ?? ""}${detail.farmer?.district ?? ""}・授權目的：${detail.authorization.purpose}`} action={<button className="button button-primary" disabled={working} onClick={() => void downloadTraceableReport()}><Download />產生可追溯資料包</button>}><div className="portfolio-summary"><article><strong>{experienceTotal.toLocaleString()}</strong><span>綠色經驗值</span></article><article><strong>{indicators.length} 項</strong><span>已授權指標</span></article><article><strong>{health.length} 項</strong><span>Data Health 領域</span></article><article><strong>{detail.authorization.scopes.length} 類</strong><span>授權資料範圍</span></article></div></Panel><Panel className="span-6" title="四大分析指標" note="各指標獨立呈現，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}・${String(item.rule_version)}`} done />) : <p className="empty-copy">此授權未包含指標，或尚未計算。</p>}</div></Panel><Panel className="span-6" title="Data Health" note="顯示資料品質狀態與規則版本"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={`${String(item.status)}・${String(item.rule_version)}`} done={item.status === "GREEN"} />) : <p className="empty-copy">此授權未包含 Data Health，或尚未計算。</p>}</div></Panel></>}
   </div>;
 }
 

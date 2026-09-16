@@ -18,7 +18,7 @@
 | MERGE-06 | Experience, indicators and Data Health | PASS |
 | MERGE-07 | Farmer GreenFin workflow | PASS |
 | MERGE-08 | Authorization and bank workflow | PASS |
-| MERGE-09 | Traceability, report and full regression | NOT STARTED |
-| MERGE-10 | Public GitHub and deployment handoff | IN PROGRESS — public repository created |
+| MERGE-09 | Traceability, report and full regression | PASS |
+| MERGE-10 | Public GitHub and deployment handoff | PASS — production deploy awaits owner resource choice |
 
-不得在 MERGE-09 通過前宣稱合併後 Demo Ready。
+MERGE-09 已通過；合併版本達到本機 Demo Ready。正式部署前仍須由 repository owner 選擇建立全新 Cloudflare 資源，或明確核准沿用既有 GFES D1／R2。

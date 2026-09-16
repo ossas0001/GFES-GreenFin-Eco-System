@@ -1,0 +1,17 @@
+Gate: MERGE-09 — Traceability, report and full regression
+Date: 2026-09-17
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-traceability.test.mjs: PASS; 3 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 37 tests, 0 failures
+- npm run test:security:local: PASS; all authentication, authorization, ownership, CSRF, concurrency, upload and session checks passed
+
+Functional checks:
+- Verified the report route rechecks the institution and active authorization before reading data.
+- Verified authorized result scopes remain independent in the generated package.
+- Verified the trace chain reaches rule configuration, standardized records, extracted fields, verification, anomalies and original-document metadata.
+- Verified BANK_DATA_ACCESSED and REPORT_GENERATED audit events are written together.
+- Verified concurrent local requests reuse one completed D1 schema bootstrap and the security regression remains stable.
