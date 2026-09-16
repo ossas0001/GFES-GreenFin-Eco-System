@@ -21,3 +21,18 @@
 
 - The first sandboxed `npm ci` attempt could not access the shared npm cache.
 - Installation was completed with the project-local `.npm-cache`; the cache directory is ignored by Git.
+
+## MERGE-02 — D1 core model and migrations
+
+- Added D1/Drizzle models for farms, crops, original documents, extracted fields, standardized records, verification results, anomalies, versioned rule sets, green actions, experience transactions, four indicator results, Data Health results, authorizations, bank cases and GreenFin audit events.
+- Kept GFES `profiles`, account controls and sessions as the only identity source; no parallel GreenFin user table was introduced.
+- Generated versioned migration `0024_late_retro_girl.sql` and added matching runtime D1 bootstrap statements for local/demo environments.
+- Added per-farmer document hash deduplication and indexes for evidence lineage, result retrieval, authorization lookup and audit traceability.
+- Added an isolated SQLite migration test that creates all GreenFin tables and verifies key constraints.
+
+### Verification
+
+- `npm run db:generate`: PASS (44 total schema tables; migration generated).
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build completed; 12 tests passed, 0 failed).

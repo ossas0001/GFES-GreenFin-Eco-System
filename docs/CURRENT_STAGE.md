@@ -11,7 +11,7 @@
 | Gate | Scope | Status |
 |---|---|---|
 | MERGE-01 | Repository foundation, naming, architecture and baseline tests | PASS |
-| MERGE-02 | D1 core model and migrations | NOT STARTED |
+| MERGE-02 | D1 core model and migrations | PASS |
 | MERGE-03 | Document／OCR／normalization pipeline | NOT STARTED |
 | MERGE-04 | Verification and anomalies | NOT STARTED |
 | MERGE-05 | Versioned rule engine | NOT STARTED |

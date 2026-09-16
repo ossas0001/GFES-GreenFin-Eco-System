@@ -1,5 +1,6 @@
 import { getDb } from "./index";
 import { createPasswordCredential } from "./credentials";
+import { ensureGreenFinSchema } from "./greenfin";
 
 export const CONSUMER_ID = "consumer-001";
 export const FARMER_ID = "farmer-001";
@@ -421,6 +422,8 @@ export async function ensurePlatformSchema(db: DbBinding) {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions(expires_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_oauth_states_expiry ON oauth_states(expires_at)"),
   ]);
+
+  await ensureGreenFinSchema(db);
 
   const actionSubmissionColumns = await queryAll<{ name: string }>(db, "PRAGMA table_info(action_submissions)");
   if (!actionSubmissionColumns.some((column) => column.name === "proof_viewed_at")) {

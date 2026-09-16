@@ -275,6 +275,217 @@ export const evidence = sqliteTable("evidence", {
   verifiedAt: text("verified_at"),
 });
 
+export const greenfinFarms = sqliteTable("greenfin_farms", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  district: text("district").notNull(),
+  areaHectares: real("area_hectares"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_greenfin_farms_farmer").on(table.farmerId)]);
+
+export const greenfinCrops = sqliteTable("greenfin_crops", {
+  id: text("id").primaryKey(),
+  farmId: text("farm_id").notNull(),
+  name: text("name").notNull(),
+  variety: text("variety").notNull().default(""),
+  cultivationAreaHectares: real("cultivation_area_hectares"),
+  plantingDate: text("planting_date"),
+  harvestDate: text("harvest_date"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_greenfin_crops_farm").on(table.farmId)]);
+
+export const greenfinDocuments = sqliteTable("greenfin_documents", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  originalName: text("original_name").notNull(),
+  fileSha256: text("file_sha256"),
+  storageKey: text("storage_key").notNull(),
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  domain: text("domain").notNull(),
+  sourceLevel: text("source_level").notNull().default("V1"),
+  status: text("status").notNull().default("UPLOADED"),
+  uploadNote: text("upload_note").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_documents_farmer_created").on(table.farmerId, table.createdAt),
+  uniqueIndex("idx_greenfin_documents_farmer_hash").on(table.farmerId, table.fileSha256),
+]);
+
+export const greenfinDocumentFields = sqliteTable("greenfin_document_fields", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").notNull(),
+  fieldName: text("field_name").notNull(),
+  rawValue: text("raw_value"),
+  normalizedValue: text("normalized_value"),
+  confidence: real("confidence"),
+  source: text("source").notNull().default("ocr"),
+  manuallyCorrected: integer("manually_corrected", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_document_fields_document").on(table.documentId),
+  uniqueIndex("idx_greenfin_document_fields_name").on(table.documentId, table.fieldName),
+]);
+
+export const greenfinStandardizedRecords = sqliteTable("greenfin_standardized_records", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").notNull(),
+  farmerId: text("farmer_id").notNull(),
+  domain: text("domain").notNull(),
+  recordType: text("record_type").notNull(),
+  dataJson: text("data_json").notNull().default("{}"),
+  sourceLevel: text("source_level").notNull().default("V1"),
+  isValid: integer("is_valid", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_records_farmer_domain").on(table.farmerId, table.domain),
+  index("idx_greenfin_records_document").on(table.documentId),
+]);
+
+export const greenfinVerificationResults = sqliteTable("greenfin_verification_results", {
+  id: text("id").primaryKey(),
+  recordId: text("record_id").notNull(),
+  sourceLevel: text("source_level").notNull(),
+  reason: text("reason").notNull(),
+  verifiedBy: text("verified_by").notNull().default("system"),
+  evidenceIdsJson: text("evidence_ids_json").notNull().default("[]"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_greenfin_verifications_record").on(table.recordId, table.createdAt)]);
+
+export const greenfinAnomalies = sqliteTable("greenfin_anomalies", {
+  id: text("id").primaryKey(),
+  recordId: text("record_id").notNull(),
+  documentId: text("document_id"),
+  anomalyType: text("anomaly_type").notNull(),
+  severity: text("severity").notNull().default("WARNING"),
+  description: text("description").notNull(),
+  isResolved: integer("is_resolved", { mode: "boolean" }).notNull().default(false),
+  resolvedBy: text("resolved_by"),
+  resolvedAt: text("resolved_at"),
+  resolutionNote: text("resolution_note").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_anomalies_record").on(table.recordId),
+  index("idx_greenfin_anomalies_unresolved").on(table.isResolved, table.severity),
+]);
+
+export const greenfinRuleSets = sqliteTable("greenfin_rule_sets", {
+  version: text("version").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  configJson: text("config_json").notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const greenfinActions = sqliteTable("greenfin_actions", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  dimension: text("dimension").notNull(),
+  actionLevel: text("action_level").notNull(),
+  description: text("description").notNull(),
+  actionDate: text("action_date").notNull(),
+  evidenceRecordIdsJson: text("evidence_record_ids_json").notNull().default("[]"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_greenfin_actions_farmer_date").on(table.farmerId, table.actionDate)]);
+
+export const greenfinExperienceTransactions = sqliteTable("greenfin_experience_transactions", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  greenActionId: text("green_action_id").notNull(),
+  dimension: text("dimension").notNull(),
+  baseValue: integer("base_value").notNull(),
+  sourceRecognitionRatio: real("source_recognition_ratio").notNull(),
+  effectiveValue: real("effective_value").notNull(),
+  ruleVersion: text("rule_version").notNull(),
+  calculatedAt: text("calculated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  inputEvidenceIdsJson: text("input_evidence_ids_json").notNull().default("[]"),
+  calculationTraceJson: text("calculation_trace_json").notNull().default("{}"),
+}, (table) => [
+  index("idx_greenfin_experience_farmer_dimension").on(table.farmerId, table.dimension),
+  uniqueIndex("idx_greenfin_experience_action_rule").on(table.greenActionId, table.ruleVersion),
+]);
+
+export const greenfinIndicatorResults = sqliteTable("greenfin_indicator_results", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  indicatorType: text("indicator_type").notNull(),
+  score: real("score").notNull(),
+  level: text("level").notNull(),
+  detailsJson: text("details_json").notNull().default("{}"),
+  ruleVersion: text("rule_version").notNull(),
+  calculatedAt: text("calculated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  inputEvidenceIdsJson: text("input_evidence_ids_json").notNull().default("[]"),
+  calculationTraceJson: text("calculation_trace_json").notNull().default("{}"),
+}, (table) => [index("idx_greenfin_indicators_farmer_type").on(table.farmerId, table.indicatorType, table.calculatedAt)]);
+
+export const greenfinDataHealthResults = sqliteTable("greenfin_data_health_results", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  domain: text("domain").notNull(),
+  status: text("status").notNull(),
+  reasonsJson: text("reasons_json").notNull().default("[]"),
+  actionsJson: text("actions_json").notNull().default("[]"),
+  affectedEvidenceIdsJson: text("affected_evidence_ids_json").notNull().default("[]"),
+  ruleVersion: text("rule_version").notNull(),
+  calculatedAt: text("calculated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_greenfin_health_farmer_domain").on(table.farmerId, table.domain, table.calculatedAt)]);
+
+export const greenfinAuthorizations = sqliteTable("greenfin_authorizations", {
+  id: text("id").primaryKey(),
+  farmerId: text("farmer_id").notNull(),
+  institutionId: text("institution_id").notNull(),
+  purpose: text("purpose").notNull(),
+  dataScopeJson: text("data_scope_json").notNull().default("[]"),
+  startAt: text("start_at").notNull(),
+  expireAt: text("expire_at").notNull(),
+  status: text("status").notNull().default("ACTIVE"),
+  revokedAt: text("revoked_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_authorizations_farmer").on(table.farmerId, table.status),
+  index("idx_greenfin_authorizations_institution").on(table.institutionId, table.status, table.expireAt),
+]);
+
+export const greenfinBankCases = sqliteTable("greenfin_bank_cases", {
+  id: text("id").primaryKey(),
+  authorizationId: text("authorization_id").notNull(),
+  institutionId: text("institution_id").notNull(),
+  farmerId: text("farmer_id").notNull(),
+  caseNumber: text("case_number"),
+  status: text("status").notNull().default("open"),
+  notes: text("notes").notNull().default(""),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("idx_greenfin_bank_cases_authorization").on(table.authorizationId),
+  index("idx_greenfin_bank_cases_institution").on(table.institutionId, table.status),
+]);
+
+export const greenfinAuditLogs = sqliteTable("greenfin_audit_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventType: text("event_type").notNull(),
+  actorId: text("actor_id"),
+  targetId: text("target_id"),
+  targetType: text("target_type"),
+  detailsJson: text("details_json").notNull().default("{}"),
+  ipAddress: text("ip_address"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_greenfin_audit_target").on(table.targetType, table.targetId, table.createdAt),
+  index("idx_greenfin_audit_event").on(table.eventType, table.createdAt),
+]);
+
 export const outcomeReports = sqliteTable("outcome_reports", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   institutionId: text("institution_id").notNull().default("institution-001"),

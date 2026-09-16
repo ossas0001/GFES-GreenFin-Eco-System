@@ -1,0 +1,21 @@
+Gate: MERGE-02 — D1 core model and migrations
+Date: 2026-09-16
+Result: PASS
+
+Commands and results:
+- npm run db:generate: PASS; generated drizzle/0024_late_retro_girl.sql
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 12 tests, 0 failures
+
+Functional checks:
+- Applied the generated migration to an isolated in-memory SQLite database.
+- Verified all 15 GreenFin core tables are created.
+- Verified no parallel greenfin_users table exists.
+- Verified a duplicate SHA-256 hash for the same farmer is rejected.
+- Verified the same hash remains valid for a different farmer.
+- Verified the migration and runtime D1 bootstrap contain the same table set.
+
+Known non-blocking findings:
+- Node reports node:sqlite as experimental.
+- Existing client chunk size and lint warnings remain tracked from MERGE-01.
