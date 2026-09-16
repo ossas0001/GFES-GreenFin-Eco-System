@@ -1,0 +1,16 @@
+Gate: MERGE-08 — Authorization and bank workflow
+Date: 2026-09-17
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-authorization.test.mjs: PASS; 3 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 24 warnings
+- npm test: PASS; production build and 34 tests, 0 failures
+
+Functional checks:
+- Verified farmers can choose an active institution, purpose, scope and bounded validity period, then revoke access.
+- Verified bank detail access checks institution identity, ACTIVE status, revoked_at, start_at, expire_at and each requested scope on the server.
+- Verified institution detail responses expose only authorized experience, indicators and Data Health.
+- Verified authorization grant, revocation and bank data access write the required audit events.
+- Browser QA passed at /institution?section=greenfin with the institution test account.

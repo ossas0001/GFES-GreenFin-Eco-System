@@ -60,7 +60,7 @@ type Role = "consumer" | "farmer" | "institution";
 export type LoginRole = Role | "admin";
 type ConsumerPage = "overview" | "local" | "invoice" | "receipt" | "orders" | "settings";
 type FarmerPage = "overview" | "content" | "products" | "projects" | "greenfin" | "funding";
-type InstitutionPage = "overview" | "portfolio" | "resource" | "report";
+type InstitutionPage = "overview" | "greenfin" | "portfolio" | "resource" | "report";
 
 const portalPaths: Record<LoginRole, string> = {
   consumer: "/",
@@ -70,7 +70,7 @@ const portalPaths: Record<LoginRole, string> = {
 };
 const consumerPages: ConsumerPage[] = ["overview", "local", "invoice", "receipt", "orders", "settings"];
 const farmerPages: FarmerPage[] = ["overview", "content", "products", "projects", "greenfin", "funding"];
-const institutionPages: InstitutionPage[] = ["overview", "portfolio", "resource", "report"];
+const institutionPages: InstitutionPage[] = ["overview", "greenfin", "portfolio", "resource", "report"];
 
 function readPortalSection(role: Role, search: string) {
   const section = new URLSearchParams(search).get("section");
@@ -1959,6 +1959,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
               )}
               {role === "institution" && (
                 <>
+                  <button className={institutionPage === "greenfin" ? "active" : ""} onClick={() => setInstitutionPage("greenfin")}><FileCheck2 />GreenFin 授權案件</button>
                   <button className={institutionPage === "portfolio" ? "active" : ""} onClick={() => setInstitutionPage("portfolio")}><PackageCheck />綠點激勵計畫</button>
                   <button className={institutionPage === "resource" ? "active" : ""} onClick={() => setInstitutionPage("resource")}><Truck />農業資源履約</button>
                   <button className={institutionPage === "report" ? "active" : ""} onClick={() => setInstitutionPage("report")}><Download />影響力報告</button>
@@ -1976,7 +1977,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                   ? ({ overview: "消費者中心", local: `用綠點支持在地｜您的所在地：${backendState ? `${backendState.consumer.city}${backendState.consumer.district}` : "台北市大安區"}`, invoice: "回傳消費證明", receipt: "影響力收據", orders: "兌換訂單", settings: "帳戶設定" } as const)[consumerPage]
                   : role === "farmer"
                     ? ({ overview: "小農中心", content: "農場故事與最新消息", products: "商品數量與點數", projects: "小農改善專案", greenfin: "GreenFin 綠色數位履歷", funding: "農業資源兌換" } as const)[farmerPage]
-                    : ({ overview: "銀行／政府／企業中心", portfolio: "綠點激勵計畫", resource: "農業資源履約管理", report: "ESG 影響力報告" } as const)[institutionPage]}</h1>
+                    : ({ overview: "銀行／政府／企業中心", greenfin: "GreenFin 授權案件", portfolio: "綠點激勵計畫", resource: "農業資源履約管理", report: "ESG 影響力報告" } as const)[institutionPage]}</h1>
                 <p>{role === "consumer" && consumerPage === "local"
                   ? "選擇支持改善專案或兌換小農好物，讓綠點回到土地"
                   : role === "consumer" && consumerPage === "invoice"
@@ -1997,6 +1998,8 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                         ? "從原始文件、OCR、核驗與異常，建立可追溯的經驗值、四大指標及 Data Health"
                         : role === "farmer" && farmerPage === "funding"
                           ? "使用收到的綠點向合作農會兌換農具、檢測、輔導與補助"
+                          : role === "institution" && institutionPage === "greenfin"
+                            ? "僅在小農有效授權的機構、範圍與期間內檢視授信補充資訊"
                           : role === "institution" && institutionPage === "portfolio"
                             ? "建立綠點激勵任務，追蹤參與、點數流向與地方效益"
                             : role === "institution" && institutionPage === "resource"
@@ -2167,6 +2170,9 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                 onDownload={() => setInstitutionPage("report")}
               />
             )}
+            {role === "institution" && institutionPage === "greenfin" && (
+              <InstitutionGreenFinPage csrfToken={csrfToken} role={requestRole} onToast={setToast} />
+            )}
             {role === "institution" && institutionPage === "portfolio" && (
               <InstitutionPortfolioPage
                 programs={incentivePlans}
@@ -2223,6 +2229,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
           )}
           {role === "institution" && (
             <>
+              <button className={institutionPage === "greenfin" ? "active" : ""} onClick={() => setInstitutionPage("greenfin")}><FileCheck2 />GreenFin</button>
               <button className={institutionPage === "portfolio" ? "active" : ""} onClick={() => setInstitutionPage("portfolio")}><PackageCheck />計畫</button>
               <button className={institutionPage === "resource" ? "active" : ""} onClick={() => setInstitutionPage("resource")}><Truck />履約</button>
               <button className={institutionPage === "report" ? "active" : ""} onClick={() => setInstitutionPage("report")}><Download />報告</button>
@@ -4184,6 +4191,10 @@ function OrderChangeRequestModal({ order, onClose, onSubmit }: { order: BackendS
 type GreenFinDocumentRow = { id: string; original_name: string; domain: string; source_level: string; status: string; created_at: string };
 type GreenFinActionRow = { id: string; dimension: string; action_level: string; description: string; action_date: string; is_active: number };
 type GreenFinResultPayload = { experience: Array<Record<string, unknown>>; indicators: Array<Record<string, unknown>>; dataHealth: Array<Record<string, unknown>>; notice?: string };
+type GreenFinAuthorizationRow = { id: string; institution_id: string; institution_name: string; purpose: string; data_scope_json: string; start_at: string; expire_at: string; status: string; revoked_at?: string | null };
+type GreenFinInstitution = { id: string; display_name: string };
+type GreenFinBankCaseRow = { authorization_id: string; farmer_id: string; farmer_name: string; purpose: string; data_scope_json: string; start_at: string; expire_at: string; status: string; revoked_at?: string | null; case_id?: string | null; case_number?: string | null; case_status?: string | null; notes?: string | null };
+type GreenFinBankDetail = GreenFinResultPayload & { authorization: { id: string; farmer_id: string; purpose: string; start_at: string; expire_at: string; scopes: string[] }; farmer?: { id: string; display_name: string; city: string; district: string }; bankCase?: { id: string; case_number: string; status: string; notes: string } | null };
 const greenFinDomains = [
   ["IDENTITY", "身分與資格"], ["LAND_CROP", "土地與作物"], ["TRANSACTION", "經營與交易"],
   ["INPUT_EQUIPMENT", "投入與設備"], ["GREEN_ACTION", "綠色行動"], ["CERTIFICATION", "認證與治理"], ["LOAN_PURPOSE", "申貸用途"],
@@ -4194,31 +4205,40 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onToast }: {
   onUpload: (domain: string, uploadNote: string, file: File) => Promise<boolean>;
   onToast: (message: string) => void;
 }) {
-  const [section, setSection] = useState<"dashboard" | "documents" | "actions" | "experience" | "indicators" | "health">("dashboard");
+  const [section, setSection] = useState<"dashboard" | "documents" | "actions" | "experience" | "indicators" | "health" | "authorizations">("dashboard");
   const [documents, setDocuments] = useState<GreenFinDocumentRow[]>([]);
   const [actions, setActions] = useState<GreenFinActionRow[]>([]);
   const [results, setResults] = useState<GreenFinResultPayload>({ experience: [], indicators: [], dataHealth: [] });
+  const [authorizations, setAuthorizations] = useState<GreenFinAuthorizationRow[]>([]);
+  const [institutions, setInstitutions] = useState<GreenFinInstitution[]>([]);
   const [domain, setDomain] = useState("GREEN_ACTION");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [actionDraft, setActionDraft] = useState({ dimension: "減量", actionLevel: "BASIC", description: "", actionDate: new Date().toISOString().slice(0, 10) });
+  const [authorizationDraft, setAuthorizationDraft] = useState(() => ({ institutionId: "", purpose: "申請授信時提供 GreenFin 永續資料作為補充資訊", dataScope: ["EXPERIENCE", "INDICATORS", "DATA_HEALTH"], startAt: new Date().toISOString().slice(0, 10), expireAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) }));
   const [working, setWorking] = useState(false);
+  const [currentTime] = useState(() => Date.now());
 
   const headers = { "x-gfes-role": role };
   async function loadGreenFin() {
-    const [documentsResponse, resultsResponse, actionsResponse] = await Promise.all([
-      fetch("/api/greenfin/documents", { headers }), fetch("/api/greenfin/results", { headers }), fetch("/api/greenfin/actions", { headers }),
+    const [documentsResponse, resultsResponse, actionsResponse, authorizationsResponse] = await Promise.all([
+      fetch("/api/greenfin/documents", { headers }), fetch("/api/greenfin/results", { headers }), fetch("/api/greenfin/actions", { headers }), fetch("/api/greenfin/authorizations", { headers }),
     ]);
     if (documentsResponse.ok) setDocuments(((await documentsResponse.json()) as { documents: GreenFinDocumentRow[] }).documents);
     if (resultsResponse.ok) setResults(await resultsResponse.json() as GreenFinResultPayload);
     if (actionsResponse.ok) setActions(((await actionsResponse.json()) as { actions: GreenFinActionRow[] }).actions);
+    if (authorizationsResponse.ok) {
+      const payload = await authorizationsResponse.json() as { authorizations: GreenFinAuthorizationRow[]; institutions: GreenFinInstitution[] };
+      setAuthorizations(payload.authorizations); setInstitutions(payload.institutions);
+      setAuthorizationDraft((current) => current.institutionId || !payload.institutions[0] ? current : { ...current, institutionId: payload.institutions[0].id });
+    }
   }
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadGreenFin(); }, 0);
     return () => window.clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function mutate(url: string, method: "PUT" | "PATCH" | "POST", payload: Record<string, unknown>, success: string) {
+  async function mutate(url: string, method: "PUT" | "PATCH" | "POST" | "DELETE", payload: Record<string, unknown>, success: string) {
     setWorking(true);
     try {
       const response = await fetch(url, { method, headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: JSON.stringify(payload) });
@@ -4241,14 +4261,67 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onToast }: {
   const experienceTotal = results.experience.reduce((sum, row) => sum + Number(row.effective_value ?? 0), 0);
   return <div className="dashboard-grid">
     <Panel className="span-12 subpage-primary" title="GreenFin 綠色數位履歷" note="Evidence First・Rule Driven・Explainable；不等同信用評分或自動核貸">
-      <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health" }[item]}</button>)}</div>
+      <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health", "authorizations"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health", authorizations: "銀行授權" }[item]}</button>)}</div>
     </Panel>
     {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><small>規則版本：GREENFIN_DEMO_V1</small></Panel>}
     {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
     {(section === "dashboard" || section === "health") && <Panel className="span-4" title="Data Health" note="GRAY／RED／YELLOW／GREEN"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={String(item.status)} done={item.status === "GREEN"} />) : <p className="empty-copy">尚未計算資料健康度。</p>}</div></Panel>}
     {section === "documents" && <><Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式"><form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、圖片或 XLSX"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept="application/pdf,image/*,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 SIMULATED OCR</button></form></Panel><Panel className="span-7" title="文件處理佇列" note={`${documents.length} 份 GreenFin 文件`}>{documents.length ? <div className="evidence-list">{documents.map((document) => <article className="evidence-item" key={document.id}><div><strong>{document.original_name}</strong><small>{document.domain}・{document.source_level}・{document.status}</small></div><div className="inline-actions">{document.status === "OCR_COMPLETED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PUT", { documentId: document.id, corrections: {} }, "OCR 欄位已確認")}>確認欄位</button>}{document.status === "FIELDS_CONFIRMED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PATCH", { documentId: document.id }, "文件已正規化")}>正規化</button>}{document.status === "NORMALIZED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/verification", "POST", { documentId: document.id }, "來源核驗與異常檢查完成")}>核驗</button>}</div></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件。</p>}</Panel></>}
     {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；實際認列仍依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "" }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim()}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}`} done={Boolean(item.is_active)} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
-    {section !== "documents" && section !== "actions" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
+    {section === "authorizations" && <><Panel className="span-5" title="建立機構授權" note="授權可隨時撤銷；單次期間最長 366 天"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/authorizations", "POST", authorizationDraft, "GreenFin 機構授權已建立"); }}><label>授權機構<select required value={authorizationDraft.institutionId} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, institutionId: event.target.value }))}><option value="">請選擇機構</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label><label>授權目的<textarea required maxLength={500} value={authorizationDraft.purpose} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, purpose: event.target.value }))} /></label><div className="form-grid"><label>開始日期<input type="date" value={authorizationDraft.startAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, startAt: event.target.value }))} /></label><label>到期日期<input type="date" min={authorizationDraft.startAt} value={authorizationDraft.expireAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, expireAt: event.target.value }))} /></label></div><fieldset><legend>資料範圍</legend>{[["EXPERIENCE", "綠色經驗值"], ["INDICATORS", "四大指標"], ["DATA_HEALTH", "Data Health"]].map(([value, label]) => <label key={value}><input type="checkbox" checked={authorizationDraft.dataScope.includes(value)} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, dataScope: event.target.checked ? [...current.dataScope, value] : current.dataScope.filter((scope) => scope !== value) }))} />{label}</label>)}</fieldset><button className="button button-primary button-block" disabled={working || !authorizationDraft.institutionId || !authorizationDraft.dataScope.length}>建立限期授權</button></form></Panel><Panel className="span-7" title="授權紀錄" note="機構、資料範圍、期間與撤銷狀態均由後端檢核"><div className="evidence-list">{authorizations.length ? authorizations.map((item) => { const scopes = JSON.parse(item.data_scope_json) as string[]; const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.expire_at).valueOf() > currentTime; return <article className="evidence-item" key={item.id}><div><strong>{item.institution_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・{item.start_at.slice(0, 10)} 至 {item.expire_at.slice(0, 10)}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效" : item.status === "REVOKED" ? "已撤銷" : "已到期"}</span>{active && <button type="button" className="text-button" onClick={() => { if (window.confirm(`確認撤銷對 ${item.institution_name} 的 GreenFin 授權？`)) void mutate(`/api/greenfin/authorizations?authorizationId=${encodeURIComponent(item.id)}`, "DELETE", {}, "GreenFin 授權已撤銷"); }}>撤銷</button>}</div></article>; }) : <p className="empty-copy">尚未建立任何機構授權。</p>}</div></Panel></>}
+    {section !== "documents" && section !== "actions" && section !== "authorizations" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
+  </div>;
+}
+
+function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: string; role: LoginRole; onToast: (message: string) => void }) {
+  const [cases, setCases] = useState<GreenFinBankCaseRow[]>([]);
+  const [detail, setDetail] = useState<GreenFinBankDetail | null>(null);
+  const [selectedAuthorizationId, setSelectedAuthorizationId] = useState("");
+  const [working, setWorking] = useState(false);
+  const [currentTime] = useState(() => Date.now());
+  const headers = { "x-gfes-role": role };
+
+  async function loadCases() {
+    const response = await fetch("/api/greenfin/bank-cases", { headers, cache: "no-store" });
+    const payload = await response.json() as { cases?: GreenFinBankCaseRow[]; error?: string };
+    if (!response.ok) throw new Error(payload.error || "讀取 GreenFin 授權案件失敗");
+    setCases(payload.cases ?? []);
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadCases().catch((error) => onToast(error instanceof Error ? error.message : "讀取 GreenFin 授權案件失敗")); }, 0);
+    return () => window.clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function openAuthorizedData(item: GreenFinBankCaseRow) {
+    setWorking(true); setSelectedAuthorizationId(item.authorization_id);
+    try {
+      if (!item.case_id) {
+        const createResponse = await fetch("/api/greenfin/bank-cases", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: JSON.stringify({ authorizationId: item.authorization_id, caseNumber: `GF-${item.authorization_id.slice(-8).toUpperCase()}`, notes: "由有效 GreenFin 授權建立" }) });
+        const created = await createResponse.json() as { error?: string };
+        if (!createResponse.ok) throw new Error(created.error || "建立案件失敗");
+      }
+      const response = await fetch(`/api/greenfin/bank-cases?authorizationId=${encodeURIComponent(item.authorization_id)}`, { headers, cache: "no-store" });
+      const payload = await response.json() as GreenFinBankDetail & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "讀取授權資料失敗");
+      setDetail(payload); await loadCases(); onToast("已依有效授權讀取 GreenFin 補充資訊並留下稽核紀錄");
+    } catch (error) { setDetail(null); onToast(error instanceof Error ? error.message : "讀取授權資料失敗"); }
+    finally { setWorking(false); }
+  }
+
+  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => [...new Map(rows.map((row) => [String(row[key]), row])).values()];
+  const indicators = latestBy(detail?.indicators ?? [], "indicator_type");
+  const health = latestBy(detail?.dataHealth ?? [], "domain");
+  const experience = detail?.experience ?? [];
+  const experienceTotal = experience.reduce((sum, row) => sum + Number(row.effective_value ?? 0), 0);
+  return <div className="dashboard-grid">
+    <Panel className="span-12 subpage-primary" title="GreenFin 已授權案件" note="後端同步檢核 institution、data scope、有效期間及撤銷狀態；每次資料讀取均留下稽核紀錄">
+      <div className="system-mode-banner"><span><LockKeyhole /></span><div><b>僅作為授信補充資訊</b><p>不提供任何授信決策、風險機率、融資條件或單一綜合分數。</p></div></div>
+    </Panel>
+    <Panel className="span-12" title="小農授權清單" note={`${cases.length} 筆與目前機構相關的授權`}>
+      {cases.length ? <div className="evidence-list">{cases.map((item) => { const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.start_at).valueOf() <= currentTime && new Date(item.expire_at).valueOf() > currentTime; const scopes = JSON.parse(item.data_scope_json) as string[]; return <article className="evidence-item" key={item.authorization_id}><div><strong>{item.farmer_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・有效至 {item.expire_at.slice(0, 10)}{item.case_number ? `・案件 ${item.case_number}` : ""}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效授權" : item.status === "REVOKED" ? "已撤銷" : "未生效／已到期"}</span><button className="text-button" disabled={!active || working} onClick={() => void openAuthorizedData(item)}>{working && selectedAuthorizationId === item.authorization_id ? "讀取中…" : item.case_id ? "檢視授權資料" : "建立並開啟案件"}</button></div></article>; })}</div> : <p className="empty-copy">目前沒有小農授權給此機構。</p>}
+    </Panel>
+    {detail && <><Panel className="span-12" title={detail.farmer?.display_name ?? detail.authorization.farmer_id} note={`${detail.farmer?.city ?? ""}${detail.farmer?.district ?? ""}・授權目的：${detail.authorization.purpose}`}><div className="portfolio-summary"><article><strong>{experienceTotal.toLocaleString()}</strong><span>綠色經驗值</span></article><article><strong>{indicators.length} 項</strong><span>已授權指標</span></article><article><strong>{health.length} 項</strong><span>Data Health 領域</span></article><article><strong>{detail.authorization.scopes.length} 類</strong><span>授權資料範圍</span></article></div></Panel><Panel className="span-6" title="四大分析指標" note="各指標獨立呈現，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}・${String(item.rule_version)}`} done />) : <p className="empty-copy">此授權未包含指標，或尚未計算。</p>}</div></Panel><Panel className="span-6" title="Data Health" note="顯示資料品質狀態與規則版本"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={`${String(item.status)}・${String(item.rule_version)}`} done={item.status === "GREEN"} />) : <p className="empty-copy">此授權未包含 Data Health，或尚未計算。</p>}</div></Panel></>}
   </div>;
 }
 

@@ -17,7 +17,7 @@
 | MERGE-05 | Versioned rule engine | PASS |
 | MERGE-06 | Experience, indicators and Data Health | PASS |
 | MERGE-07 | Farmer GreenFin workflow | PASS |
-| MERGE-08 | Authorization and bank workflow | NOT STARTED |
+| MERGE-08 | Authorization and bank workflow | PASS |
 | MERGE-09 | Traceability, report and full regression | NOT STARTED |
 | MERGE-10 | Public GitHub and deployment handoff | IN PROGRESS — public repository created |
 

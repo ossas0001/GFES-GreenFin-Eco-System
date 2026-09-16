@@ -15,3 +15,19 @@
 - `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build includes `/api/greenfin/actions`; 31 tests passed, 0 failed).
 - Browser QA: PASS on the farmer account at `/farmer?section=greenfin`; the overview, document／OCR and green-action work areas rendered and remained usable after a clean development-server restart.
+
+## MERGE-08 — Authorization and bank workflow
+
+- Added farmer-controlled GreenFin authorizations with an explicit institution, purpose, data scope, start time, expiry time and revocation state.
+- Validated the target institution against active GFES institution accounts and limited one authorization to at most 366 days.
+- Added server-side authorization enforcement for institution access: institution identity, allowed data scope, active period and revocation state are checked for every detail request.
+- Added GreenFin bank-case creation and an institution workspace that only exposes authorized experience, indicators and Data Health.
+- Added `AUTHORIZATION_GRANTED`, `AUTHORIZATION_REVOKED` and `BANK_DATA_ACCESSED` audit writes, including actor and access context.
+- Kept all GreenFin outputs separate and retained the explicit boundary that the information is supplemental and does not make lending decisions.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 24 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes authorization and bank-case APIs; 34 tests passed, 0 failed).
+- Browser QA: PASS on `/institution?section=greenfin`; navigation, authorization controls, disclosure text and empty-state layout rendered correctly.
