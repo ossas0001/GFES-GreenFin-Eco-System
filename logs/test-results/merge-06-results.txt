@@ -1,0 +1,16 @@
+Gate: MERGE-06 — Experience, indicators and Data Health
+Date: 2026-09-16
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-results.test.mjs: PASS; 4 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 28 tests, 0 failures
+
+Functional checks:
+- Verified V1 evidence applies the 0.5 recognition ratio.
+- Verified the annual dimension cap stops at 250 and calculation traces identify capped values.
+- Verified exactly four independent indicator results, each within 0–100 with its own level and trace.
+- Verified representative RED, YELLOW, GREEN and GRAY Data Health outcomes, each with reasons.
+- Verified the API stores experience, indicators and Data Health in separate tables and contains no combined/credit score field.

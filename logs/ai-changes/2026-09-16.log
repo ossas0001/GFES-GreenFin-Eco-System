@@ -81,3 +81,18 @@
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build includes `/api/greenfin/rules`; 24 tests passed, 0 failed).
+
+## MERGE-06 — Experience, indicators and Data Health
+
+- Added rule-driven experience calculation for four independent dimensions with source ratios, annual dimension caps and the total cap.
+- Added four independently stored indicators: completeness, credibility, business maturity and green maturity.
+- Added seven-domain Data Health calculation with strict GRAY → RED → YELLOW → GREEN priority, reasons and suggested actions.
+- Added `/api/greenfin/results` to calculate and retrieve the three output groups while enforcing farmer ownership and CSRF protection.
+- Preserved rule version, calculation time, evidence IDs and calculation traces for every calculated result.
+- Added an explicit API notice that these outputs are not a credit score or automated lending decision.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/results`; 28 tests passed, 0 failed).
