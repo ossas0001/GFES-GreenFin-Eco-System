@@ -36,3 +36,19 @@
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build completed; 12 tests passed, 0 failed).
+
+## MERGE-03 — Document, OCR and normalization pipeline
+
+- Added a farmer-only `/api/greenfin/documents` API using the existing GFES session and CSRF controls.
+- Added PDF/JPEG/PNG/WebP/XLSX MIME, size and file-signature validation plus SHA-256 duplicate detection.
+- Stores original GreenFin documents in the existing R2 binding under farmer-isolated keys.
+- Added an OCR provider interface and a `MockOcrProvider`; every mock result is explicitly labelled `DEMO` or `SIMULATED`.
+- Added OCR field confirmation/correction and deterministic field normalization for dates, amounts and hectares.
+- Produces traceable standardized records and advances document status through `OCR_COMPLETED`, `FIELDS_CONFIRMED` and `NORMALIZED`.
+- Writes `DOCUMENT_UPLOADED`, `OCR_COMPLETED` and `FIELD_CORRECTED` audit events.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/documents`; 16 tests passed, 0 failed).

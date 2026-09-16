@@ -1,0 +1,20 @@
+Gate: MERGE-03 — Document, OCR and normalization pipeline
+Date: 2026-09-16
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-documents.test.mjs: PASS; 4 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 16 tests, 0 failures
+
+Functional checks:
+- Verified date, amount and hectare normalization results.
+- Verified mock OCR output is explicitly labelled DEMO/SIMULATED and confidence values remain in range.
+- Verified valid PDF magic bytes and SHA-256 generation.
+- Verified disguised PDF content and unsupported MIME types are rejected.
+- Verified route source requires a GFES farmer session, CSRF token and farmer ownership predicates.
+- Verified production build exposes `/api/greenfin/documents`.
+
+Environment note:
+- Live R2 persistence requires the configured Cloudflare `UPLOADS` binding; unit validation and production compilation passed locally.
