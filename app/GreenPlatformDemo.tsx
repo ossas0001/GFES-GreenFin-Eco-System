@@ -1918,6 +1918,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
 
   if (adminMode) {
     return <AdminDashboard
+      key={backendState ? JSON.stringify(backendState.admin) : "admin-loading"}
       snapshot={backendState}
       busy={backendBusy}
       error={backendError}
@@ -2038,6 +2039,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
             )}
             {role === "consumer" && consumerPage === "local" && (
               <LocalSupportDashboard
+                key={backendState ? `${backendState.consumer.city}-${backendState.consumer.district}` : "consumer-location"}
                 points={points}
                 projects={availableLocalProjects}
                 supportedIds={supportedProjectIds}
@@ -2082,7 +2084,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
               />
             )}
             {role === "consumer" && consumerPage === "settings" && backendState && (
-              <ConsumerSettingsPage settings={backendState.consumerSettings} busy={backendBusy} onSave={saveConsumerSettings} />
+              <ConsumerSettingsPage key={backendState.consumerSettings.updatedAt || "consumer-settings"} settings={backendState.consumerSettings} busy={backendBusy} onSave={saveConsumerSettings} />
             )}
             {role === "farmer" && farmerPage === "overview" && (
               <FarmerDashboard
@@ -2134,6 +2136,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
             )}
             {role === "farmer" && farmerPage === "evidence" && (
               <FarmerEvidencePage
+                key={(backendState?.evidence ?? []).map((record) => record.id).join(",") || "farmer-evidence"}
                 records={backendState?.evidence ?? []}
                 busy={backendBusy}
                 onUpload={uploadFarmerEvidence}
@@ -2642,16 +2645,16 @@ function AdminDashboard({
     typeof window === "undefined" ? "overview" : readAdminSection(window.location.search),
   );
   const [notice, setNotice] = useState("");
-  const [accountDrafts, setAccountDrafts] = useState<Record<string, { displayName: string; email: string; username: string; status: string; city: string; district: string; pointsToSend: number }>>({});
-  const [productDrafts, setProductDrafts] = useState<Record<string, { points: number; stock: number; status: string }>>({});
-  const [projectDrafts, setProjectDrafts] = useState<Record<string, { points: number; targetPoints: number; status: string }>>({});
-  const [incentiveDrafts, setIncentiveDrafts] = useState<Record<string, { budgetPoints: number; progress: number }>>({});
-  const [procurementDrafts, setProcurementDrafts] = useState<Record<string, { quantity: number; budgetPoints: number; deliveryRegion: string; status: string }>>({});
-  const [parameterDrafts, setParameterDrafts] = useState<Record<string, string>>({});
-  const [templateDrafts, setTemplateDrafts] = useState<Record<string, string>>({});
-  const [reviewDrafts, setReviewDrafts] = useState<Record<string, string>>({});
+  const [accountDrafts, setAccountDrafts] = useState<Record<string, { displayName: string; email: string; username: string; status: string; city: string; district: string; pointsToSend: number }>>(() => Object.fromEntries((snapshot?.admin.accounts ?? []).map((item) => [item.id, { displayName: item.displayName, email: item.email, username: item.username, status: item.status, city: item.city, district: item.district, pointsToSend: 0 }])));
+  const [productDrafts, setProductDrafts] = useState<Record<string, { points: number; stock: number; status: string }>>(() => Object.fromEntries((snapshot?.admin.products ?? []).map((item) => [item.id, { points: item.points, stock: item.stock, status: item.status }])));
+  const [projectDrafts, setProjectDrafts] = useState<Record<string, { points: number; targetPoints: number; status: string }>>(() => Object.fromEntries((snapshot?.admin.projects ?? []).map((item) => [item.id, { points: item.points, targetPoints: item.targetPoints, status: item.status }])));
+  const [incentiveDrafts, setIncentiveDrafts] = useState<Record<string, { budgetPoints: number; progress: number }>>(() => Object.fromEntries((snapshot?.admin.incentives ?? []).map((item) => [item.id, { budgetPoints: item.budgetPoints, progress: item.progress }])));
+  const [procurementDrafts, setProcurementDrafts] = useState<Record<string, { quantity: number; budgetPoints: number; deliveryRegion: string; status: string }>>(() => Object.fromEntries((snapshot?.admin.procurements ?? []).map((item) => [item.id, { quantity: item.quantity, budgetPoints: item.budgetPoints, deliveryRegion: item.deliveryRegion, status: item.status }])));
+  const [parameterDrafts, setParameterDrafts] = useState<Record<string, string>>(() => Object.fromEntries((snapshot?.admin.parameters ?? []).map((item) => [item.parameterKey, item.value])));
+  const [templateDrafts, setTemplateDrafts] = useState<Record<string, string>>(() => Object.fromEntries((snapshot?.admin.dataTemplates ?? []).map((item) => [item.templateKey, JSON.stringify(item.sampleData, null, 2)])));
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, string>>(() => Object.fromEntries((snapshot?.admin.actionSubmissions ?? []).map((item) => [item.id, item.reviewNote ?? ""])));
   const [templateRole, setTemplateRole] = useState<"all" | "consumer" | "farmer" | "institution">("all");
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState("");
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState(() => snapshot?.admin.dataTemplates[0]?.templateKey ?? "");
 
   function setSection(nextSection: AdminSection) {
     setSectionState(nextSection);
@@ -2667,19 +2670,6 @@ function AdminDashboard({
     window.addEventListener("popstate", restoreSection);
     return () => window.removeEventListener("popstate", restoreSection);
   }, []);
-
-  useEffect(() => {
-    if (!snapshot) return;
-    setAccountDrafts(Object.fromEntries(snapshot.admin.accounts.map((item) => [item.id, { displayName: item.displayName, email: item.email, username: item.username, status: item.status, city: item.city, district: item.district, pointsToSend: 0 }])));
-    setProductDrafts(Object.fromEntries(snapshot.admin.products.map((item) => [item.id, { points: item.points, stock: item.stock, status: item.status }])));
-    setProjectDrafts(Object.fromEntries(snapshot.admin.projects.map((item) => [item.id, { points: item.points, targetPoints: item.targetPoints, status: item.status }])));
-    setIncentiveDrafts(Object.fromEntries(snapshot.admin.incentives.map((item) => [item.id, { budgetPoints: item.budgetPoints, progress: item.progress }])));
-    setProcurementDrafts(Object.fromEntries(snapshot.admin.procurements.map((item) => [item.id, { quantity: item.quantity, budgetPoints: item.budgetPoints, deliveryRegion: item.deliveryRegion, status: item.status }])));
-    setParameterDrafts(Object.fromEntries(snapshot.admin.parameters.map((item) => [item.parameterKey, item.value])));
-    setTemplateDrafts(Object.fromEntries(snapshot.admin.dataTemplates.map((item) => [item.templateKey, JSON.stringify(item.sampleData, null, 2)])));
-    setReviewDrafts((current) => Object.fromEntries(snapshot.admin.actionSubmissions.map((item) => [item.id, current[item.id] ?? item.reviewNote ?? ""])));
-    setSelectedTemplateKey((current) => snapshot.admin.dataTemplates.some((item) => item.templateKey === current) ? current : snapshot.admin.dataTemplates[0]?.templateKey ?? "");
-  }, [snapshot]);
 
   async function save(action: string, payload: Record<string, unknown>, success: string, options?: { confirmedByCheckbox?: boolean }) {
     const result = await onAction(action, payload, options);
@@ -2968,6 +2958,7 @@ function AdminDashboard({
         </div>}
 
         {section === "system" && <AdminApiSystemPage
+          key={JSON.stringify(snapshot.integrationSettings)}
           settings={snapshot.integrationSettings}
           runs={snapshot.verificationRuns}
           points={snapshot.consumer.points}
@@ -3029,14 +3020,15 @@ function LoginModal({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
-  useEffect(() => {
+  function changeRole(nextRole: LoginRole) {
+    setRole(nextRole);
     setEmail("");
     setPassword("");
     setUsername("");
     setConfirmPassword("");
     setLocalError("");
-    if (role === "admin") setMode("login");
-  }, [role]);
+    if (nextRole === "admin") setMode("login");
+  }
 
   function switchMode(nextMode: "login" | "register") {
     if (nextMode === "register" && role === "admin") return;
@@ -3081,7 +3073,7 @@ function LoginModal({
               const item = loginRoles[key];
               const Icon = item.icon;
               return (
-                <button type="button" className={`role-option ${role === key ? "active" : ""}`} key={key} onClick={() => setRole(key)}>
+                <button type="button" className={`role-option ${role === key ? "active" : ""}`} key={key} onClick={() => changeRole(key)}>
                   <span className="role-icon"><Icon /></span>
                   <span><strong>{item.label}</strong><small>{item.description}</small></span>
                   {role === key && <CheckCircle2 className="role-check" />}
@@ -3133,8 +3125,6 @@ function LoginModal({
 
 function ConsumerSettingsPage({ settings, busy, onSave }: { settings: ConsumerSettings; busy: boolean; onSave: (settings: ConsumerSettings) => Promise<boolean> }) {
   const [draft, setDraft] = useState(settings);
-
-  useEffect(() => setDraft(settings), [settings]);
 
   function update<K extends keyof ConsumerSettings>(key: K, value: ConsumerSettings[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -3438,11 +3428,6 @@ function LocalSupportDashboard({
   const [draftDistrict, setDraftDistrict] = useState(activeLocationDistrict);
   const [locationStatus, setLocationStatus] = useState("");
   const [locating, setLocating] = useState(false);
-
-  useEffect(() => {
-    setDraftCity(activeLocationCity);
-    setDraftDistrict(activeLocationDistrict);
-  }, [activeLocationCity, activeLocationDistrict]);
 
   function detectCurrentLocation() {
     if (!navigator.geolocation) {
@@ -4059,10 +4044,6 @@ function ConsumerReceiptPage({
 }) {
   const [activeId, setActiveId] = useState(items[items.length - 1]?.id || "");
 
-  useEffect(() => {
-    if (items.length && !items.some((item) => item.id === activeId)) setActiveId(items[items.length - 1].id);
-  }, [items, activeId]);
-
   if (!items.length) {
     return (
       <div className="dashboard-grid"><Panel className="span-12 subpage-empty" title="尚未產生影響力收據" note="支持改善專案或兌換小農好物後，收據會自動出現在這裡">
@@ -4131,10 +4112,6 @@ function ConsumerOrdersPage({
 }) {
   const [activeId, setActiveId] = useState(initialId);
   const [changeOrder, setChangeOrder] = useState<BackendSnapshot["orders"][number] | null>(null);
-
-  useEffect(() => {
-    if (items.length && !items.some((item) => item.id === activeId)) setActiveId(items[items.length - 1].id);
-  }, [items, activeId]);
 
   if (!items.length) {
     return (
@@ -4229,12 +4206,6 @@ function FarmerEvidencePage({
   const [selectedType, setSelectedType] = useState<string>(farmerEvidenceRequirements[2].type);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-
-  useEffect(() => {
-    if (missingRequirements.some((requirement) => requirement.type === selectedType)) return;
-    setSelectedType(missingRequirements[0]?.type ?? "");
-    setSelectedFile(null);
-  }, [missingRequirements, selectedType]);
 
   const selectedRequirement = missingRequirements.find((requirement) => requirement.type === selectedType) ?? missingRequirements[0];
 
@@ -4397,16 +4368,12 @@ function AdminApiSystemPage({
   onUpdate: (values: { serviceKey: string; enabled: boolean; rewardPoints: number; endpointLabel: string; sampleResponse: string }) => void;
   onSimulate: (serviceKey: string) => void;
 }) {
-  const [drafts, setDrafts] = useState<Record<string, { enabled: boolean; rewardPoints: number; endpointLabel: string; sampleResponse: string }>>({});
-
-  useEffect(() => {
-    setDrafts(Object.fromEntries(settings.map((setting) => [setting.serviceKey, {
+  const [drafts, setDrafts] = useState<Record<string, { enabled: boolean; rewardPoints: number; endpointLabel: string; sampleResponse: string }>>(() => Object.fromEntries(settings.map((setting) => [setting.serviceKey, {
       enabled: setting.enabled,
       rewardPoints: setting.rewardPoints,
       endpointLabel: setting.endpointLabel,
       sampleResponse: JSON.stringify(setting.sampleResponse, null, 2),
     }])));
-  }, [settings]);
 
   const successfulRuns = runs.filter((run) => run.status === "success").length;
   const enabledServices = settings.filter((setting) => setting.enabled).length;

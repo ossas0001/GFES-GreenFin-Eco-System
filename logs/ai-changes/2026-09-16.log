@@ -1,0 +1,23 @@
+# AI Change Log — 2026-09-16
+
+## MERGE-01 — Project foundation
+
+- Connected the GFES (`480b4b0`) and GreenFin (`4eac5c1`) Git histories with merge commit `d6770a3`.
+- Renamed the merged project to **GFES (GreenFin Eco System)** and documented both upstream repositories.
+- Added the merged product specification, rules, architecture, decisions and staged integration plan.
+- Established the GreenFin product boundary: explainable sustainability data and indicators, not credit scoring, loan approval or pricing advice.
+- Added project-foundation tests covering identity, required documents, rule version, D1/R2 architecture, shared authentication and upstream traceability.
+- Repaired eight pre-existing React lint errors in `app/GreenPlatformDemo.tsx` by removing state synchronization effects and using stable initialization/remount boundaries.
+- Created the public GitHub repository `ossas0001/GFES-GreenFin-Eco-System`.
+
+## Verification
+
+- `npm run lint`: PASS (0 errors, 26 non-blocking warnings).
+- `npm test`: PASS (production build completed; 8 tests passed, 0 failed).
+- Build warning retained for follow-up: one or more minified client chunks exceed 500 kB.
+- Dependency audit reported 24 findings during installation (1 low, 6 moderate, 16 high, 1 critical). No forced automated upgrade was applied because dependency remediation must be reviewed for compatibility.
+
+## Installation notes
+
+- The first sandboxed `npm ci` attempt could not access the shared npm cache.
+- Installation was completed with the project-local `.npm-cache`; the cache directory is ignored by Git.
