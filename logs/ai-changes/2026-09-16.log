@@ -52,3 +52,18 @@
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build includes `/api/greenfin/documents`; 16 tests passed, 0 failed).
+
+## MERGE-04 — Verification and anomalies
+
+- Added V0–V3 source verification with mandatory human-readable reasons and evidence references.
+- Added downgrade rules for missing source documents, low OCR confidence, expiry and invalid records.
+- Added all eight required anomaly categories: `DUPLICATE`, `EXPIRED`, `FUTURE_DATE`, `CONFLICT`, `INVALID_FORMAT`, `OCR_LOW_CONFIDENCE`, `MISSING_REQUIRED_FIELD` and `VERIFICATION_FAILED`.
+- Added `/api/greenfin/verification` for verification, farmer/admin review queues and manual resolution.
+- Preserved anomalous data: resolution updates review metadata and never deletes anomaly or evidence records.
+- Added ownership checks, CSRF protection and verification/anomaly audit events.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/verification`; 20 tests passed, 0 failed).

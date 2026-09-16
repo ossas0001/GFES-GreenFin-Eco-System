@@ -1,0 +1,18 @@
+Gate: MERGE-04 — Verification and anomalies
+Date: 2026-09-16
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-verification.test.mjs: PASS; 4 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 20 tests, 0 failures
+
+Functional checks:
+- Verified V3, V2 and V1 remain unchanged when no downgrade condition exists.
+- Verified low-confidence V3 becomes V1.
+- Verified expired, invalid and orphan records become V0 with reasons.
+- Verified one combined fixture detects all eight mandatory anomaly categories.
+- Verified expired and missing-required-field findings are critical.
+- Verified review resolution updates rows without deleting anomaly data.
+- Verified farmer ownership predicates and verification/anomaly audit events.
