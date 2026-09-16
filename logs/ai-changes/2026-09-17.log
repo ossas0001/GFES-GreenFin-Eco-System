@@ -1,0 +1,17 @@
+# AI Change Log — 2026-09-17
+
+## MERGE-07 — Farmer GreenFin workflow
+
+- Replaced the farmer-side legacy evidence／sustainability-proof workflow with the GreenFin digital profile.
+- Added farmer navigation and six GreenFin work areas: overview, documents／OCR, green actions, green experience, four independent indicators and Data Health.
+- Connected document upload, OCR field confirmation, normalization, verification and rule-based recalculation to the GreenFin APIs.
+- Added `/api/greenfin/actions` for farmer-owned green action listing, creation and deactivation with shared GFES authentication, CSRF enforcement and evidence ownership checks.
+- Kept the product boundary visible in the UI: GreenFin outputs are not credit scores or automated lending decisions.
+- Updated rendered-HTML and farmer workflow coverage for the new GreenFin navigation and prohibited-result terminology.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/actions`; 31 tests passed, 0 failed).
+- Browser QA: PASS on the farmer account at `/farmer?section=greenfin`; the overview, document／OCR and green-action work areas rendered and remained usable after a clean development-server restart.

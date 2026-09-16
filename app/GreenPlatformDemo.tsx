@@ -59,7 +59,7 @@ import farmerImageLibrary from "./data/farmerImageLibrary.json";
 type Role = "consumer" | "farmer" | "institution";
 export type LoginRole = Role | "admin";
 type ConsumerPage = "overview" | "local" | "invoice" | "receipt" | "orders" | "settings";
-type FarmerPage = "overview" | "content" | "products" | "projects" | "evidence" | "funding";
+type FarmerPage = "overview" | "content" | "products" | "projects" | "greenfin" | "funding";
 type InstitutionPage = "overview" | "portfolio" | "resource" | "report";
 
 const portalPaths: Record<LoginRole, string> = {
@@ -69,7 +69,7 @@ const portalPaths: Record<LoginRole, string> = {
   admin: "/admin",
 };
 const consumerPages: ConsumerPage[] = ["overview", "local", "invoice", "receipt", "orders", "settings"];
-const farmerPages: FarmerPage[] = ["overview", "content", "products", "projects", "evidence", "funding"];
+const farmerPages: FarmerPage[] = ["overview", "content", "products", "projects", "greenfin", "funding"];
 const institutionPages: InstitutionPage[] = ["overview", "portfolio", "resource", "report"];
 
 function readPortalSection(role: Role, search: string) {
@@ -1173,24 +1173,23 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
     }
   }
 
-  async function uploadFarmerEvidence(title: string, evidenceType: string, file: File) {
-    if (!window.confirm(`流程最終確認\n\n確認上傳「${title}」並送交平台審核？\n\n送出後系統會立即建立審核紀錄。`)) return false;
+  async function uploadGreenFinDocument(domain: string, uploadNote: string, file: File) {
+    if (!window.confirm(`流程最終確認\n\n確認將「${file.name}」上傳至 GreenFin？\n\n送出後會執行 SIMULATED OCR，仍需您確認欄位。`)) return false;
     setBackendBusy(true);
     try {
       const form = new FormData();
-      form.set("submissionType", "farmer_evidence");
-      form.set("title", title);
-      form.set("evidenceType", evidenceType);
+      form.set("domain", domain);
+      form.set("sourceLevel", "V1");
+      form.set("uploadNote", uploadNote);
       form.set("file", file);
-      const response = await fetch("/api/uploads", { method: "POST", headers: { "x-gfes-csrf": csrfToken, "x-gfes-role": requestRole }, body: form });
+      const response = await fetch("/api/greenfin/documents", { method: "POST", headers: { "x-gfes-csrf": csrfToken, "x-gfes-role": requestRole }, body: form });
       const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error || "永續證明上傳失敗");
-      await refreshBackend();
+      if (!response.ok) throw new Error(result.error || "GreenFin 文件上傳失敗");
       setBackendError("");
-      setToast(`${title}已上傳，等待平台審核`);
+      setToast(`${file.name} 已上傳，SIMULATED OCR 已完成`);
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "永續證明上傳失敗";
+      const message = error instanceof Error ? error.message : "GreenFin 文件上傳失敗";
       setBackendError(message);
       setToast(message);
       return false;
@@ -1954,7 +1953,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                   <button className={farmerPage === "content" ? "active" : ""} onClick={() => setFarmerPage("content")}><Newspaper />故事與消息</button>
                   <button className={farmerPage === "products" ? "active" : ""} onClick={() => setFarmerPage("products")}><ShoppingBasket />商品數量與點數</button>
                   <button className={farmerPage === "projects" ? "active" : ""} onClick={() => setFarmerPage("projects")}><HeartHandshake />小農改善專案</button>
-                  <button className={farmerPage === "evidence" ? "active" : ""} onClick={() => setFarmerPage("evidence")}><Upload />永續證明</button>
+                  <button className={farmerPage === "greenfin" ? "active" : ""} onClick={() => setFarmerPage("greenfin")}><FileCheck2 />GreenFin 數位履歷</button>
                   <button className={farmerPage === "funding" ? "active" : ""} onClick={() => setFarmerPage("funding")}><PackageCheck />農業資源兌換</button>
                 </>
               )}
@@ -1976,7 +1975,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                 <h1>{role === "consumer"
                   ? ({ overview: "消費者中心", local: `用綠點支持在地｜您的所在地：${backendState ? `${backendState.consumer.city}${backendState.consumer.district}` : "台北市大安區"}`, invoice: "回傳消費證明", receipt: "影響力收據", orders: "兌換訂單", settings: "帳戶設定" } as const)[consumerPage]
                   : role === "farmer"
-                    ? ({ overview: "小農中心", content: "農場故事與最新消息", products: "商品數量與點數", projects: "小農改善專案", evidence: "永續證明", funding: "農業資源兌換" } as const)[farmerPage]
+                    ? ({ overview: "小農中心", content: "農場故事與最新消息", products: "商品數量與點數", projects: "小農改善專案", greenfin: "GreenFin 綠色數位履歷", funding: "農業資源兌換" } as const)[farmerPage]
                     : ({ overview: "銀行／政府／企業中心", portfolio: "綠點激勵計畫", resource: "農業資源履約管理", report: "ESG 影響力報告" } as const)[institutionPage]}</h1>
                 <p>{role === "consumer" && consumerPage === "local"
                   ? "選擇支持改善專案或兌換小農好物，讓綠點回到土地"
@@ -1994,8 +1993,8 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                         ? "管理商品、庫存、配送區域，以及綁定農產履歷與無農藥證明"
                       : role === "farmer" && farmerPage === "projects"
                         ? "填寫產地改善計畫、綠點用途與募資目標，公開給消費者支持"
-                      : role === "farmer" && farmerPage === "evidence"
-                        ? "管理農產履歷、無農藥檢測與友善耕作紀錄"
+                      : role === "farmer" && farmerPage === "greenfin"
+                        ? "從原始文件、OCR、核驗與異常，建立可追溯的經驗值、四大指標及 Data Health"
                         : role === "farmer" && farmerPage === "funding"
                           ? "使用收到的綠點向合作農會兌換農具、檢測、輔導與補助"
                           : role === "institution" && institutionPage === "portfolio"
@@ -2093,7 +2092,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                 orders={backendState?.orders ?? []}
                 records={backendState?.evidence ?? []}
                 projects={managedFarmerProjects}
-                onEvidence={() => setFarmerPage("evidence")}
+                onEvidence={() => setFarmerPage("greenfin")}
                 onProducts={() => setFarmerPage("products")}
                 onProjects={() => setFarmerPage("projects")}
                 onBenefits={() => setFarmerPage("funding")}
@@ -2134,13 +2133,13 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                 onOutcome={openOutcomeReport}
               />
             )}
-            {role === "farmer" && farmerPage === "evidence" && (
-              <FarmerEvidencePage
-                key={(backendState?.evidence ?? []).map((record) => record.id).join(",") || "farmer-evidence"}
-                records={backendState?.evidence ?? []}
+            {role === "farmer" && farmerPage === "greenfin" && (
+              <FarmerGreenFinPage
                 busy={backendBusy}
-                onUpload={uploadFarmerEvidence}
-                onFunding={() => setFarmerPage("funding")}
+                csrfToken={csrfToken}
+                role={requestRole}
+                onUpload={uploadGreenFinDocument}
+                onToast={setToast}
               />
             )}
             {role === "farmer" && farmerPage === "funding" && (
@@ -2218,7 +2217,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
               <button className={farmerPage === "content" ? "active" : ""} onClick={() => setFarmerPage("content")}><Newspaper />內容</button>
               <button className={farmerPage === "products" ? "active" : ""} onClick={() => setFarmerPage("products")}><ShoppingBasket />商品</button>
               <button className={farmerPage === "projects" ? "active" : ""} onClick={() => setFarmerPage("projects")}><HeartHandshake />改善</button>
-              <button className={farmerPage === "evidence" ? "active" : ""} onClick={() => setFarmerPage("evidence")}><Upload />證明</button>
+              <button className={farmerPage === "greenfin" ? "active" : ""} onClick={() => setFarmerPage("greenfin")}><FileCheck2 />GreenFin</button>
               <button className={farmerPage === "funding" ? "active" : ""} onClick={() => setFarmerPage("funding")}><PackageCheck />資源</button>
             </>
           )}
@@ -3786,7 +3785,7 @@ function FarmerDashboard({
   const availableBenefits = farmerBenefits.filter((benefit) => farmerPoints >= benefit.requiredScore);
   const pendingOrders = orders.filter((order) => order.stage < 3);
   const evidenceCount = new Set(records.map((record) => record.evidenceType)).size;
-  const evidencePercent = Math.min(100, Math.round((evidenceCount / farmerEvidenceRequirements.length) * 100));
+  const evidencePercent = Math.min(100, Math.round((evidenceCount / 7) * 100));
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyOrders = orders.filter((order) => order.createdAt.slice(0, 7) === currentMonth).length;
   return (
@@ -3794,16 +3793,16 @@ function FarmerDashboard({
       <div className="metrics">
         <Metric icon={HandCoins} value={`${farmerPoints.toLocaleString()} 點`} label="小農綠點餘額" delta="可於農會運用" />
         <Metric icon={ShoppingBasket} value={`${products.length} 款`} label="商品數量" delta={`${pendingOrders.length} 筆待處理訂單`} />
-        <Metric icon={FileCheck2} value={`${evidencePercent}%`} label="履歷與檢測完整度" delta={evidenceCount >= farmerEvidenceRequirements.length ? "完成" : `已上傳 ${evidenceCount} 項`} />
+        <Metric icon={FileCheck2} value={`${evidencePercent}%`} label="GreenFin 資料準備度" delta="進入數位履歷查看正式 Data Health" />
         <Metric icon={PackageCheck} value={`${availableBenefits.length} 項`} label="可兌換農業資源" delta="依綠點餘額" />
       </div>
       <div className="dashboard-grid">
         <Panel className="span-7" title="商品與消費者支持" note="附近消費者可透過綠點兌換，支持直接累積到小農帳戶">
           <div className="score-panel"><div className="score-ring" style={{ "--score": `${Math.min(100, monthlyOrders * 10)}%` } as React.CSSProperties}><span><strong>{monthlyOrders}</strong><small>本月訂單</small></span></div><div><h3>{products.length ? "商品已進入在地推薦" : "先建立第一項小農商品"}</h3><p>{projects.length ? `目前另有 ${projects.length} 項改善專案。` : "商品綁定產銷履歷與無農藥檢測後，會優先顯示可信標章與配送距離。"}</p><div className="farmer-dashboard-actions"><button className="button button-primary" onClick={onProjects}><HeartHandshake />管理改善專案</button><button className="button button-secondary" onClick={onProducts}><ShoppingBasket />商品管理</button></div></div></div>
         </Panel>
-        <Panel className="span-5" title="永續資料" note="用可追溯證明建立消費信任">
-          <div className="evidence-list">{farmerEvidenceRequirements.map((requirement) => { const record = records.find((item) => item.evidenceType === requirement.type); return <Evidence key={requirement.type} title={requirement.title} note={record ? `${record.status === "verified" ? "已驗證" : "等待審核"}・${record.fileName ?? record.submittedAt}` : "尚未上傳"} done={Boolean(record)} />; })}</div>
-          <button className="button button-secondary button-block" onClick={onEvidence}><Upload />管理永續證明</button>
+        <Panel className="span-5" title="GreenFin 數位履歷" note="用可追溯證據建立授信補充資訊">
+          <div className="evidence-list"><Evidence title="文件與 SIMULATED OCR" note="上傳後先人工確認欄位" done={evidenceCount > 0} /><Evidence title="來源核驗與異常" note="V0–V3 並保留覆核佇列" done={false} /><Evidence title="三類獨立結果" note="經驗值、四大指標、Data Health" done={false} /></div>
+          <button className="button button-secondary button-block" onClick={onEvidence}><FileCheck2 />開啟 GreenFin</button>
         </Panel>
         <Panel className="span-12" title="農會農業資源兌換" note="把消費者支持轉成土壤檢測、農具、輔導與補助資源" action={<button className="button button-primary" onClick={onBenefits}>查看全部資源<ArrowRight /></button>}>
           <div className="funding-unlock-summary"><div className="funding-current"><span><HandCoins /></span><div><small>目前可用</small><strong>{farmerPoints.toLocaleString()} 點</strong><p>可兌換 {availableBenefits.length}／{farmerBenefits.length} 項資源</p></div></div><div className="funding-next complete"><b>綠點來源透明</b><small>消費者兌換、直接支持與企業配對均可追溯。</small></div></div>
@@ -4182,63 +4181,75 @@ function OrderChangeRequestModal({ order, onClose, onSubmit }: { order: BackendS
     <label>收件人<input value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} /></label><label>聯絡電話<input value={form.recipientPhone} onChange={(event) => setForm((current) => ({ ...current, recipientPhone: event.target.value }))} /></label><label>郵遞區號<input value={form.postalCode} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} /></label><label>縣市<input value={form.shippingCity} onChange={(event) => setForm((current) => ({ ...current, shippingCity: event.target.value }))} /></label><label>行政區<input value={form.shippingDistrict} onChange={(event) => setForm((current) => ({ ...current, shippingDistrict: event.target.value }))} /></label><label className="full">詳細地址<input value={form.shippingAddress} onChange={(event) => setForm((current) => ({ ...current, shippingAddress: event.target.value }))} /></label><label className="full">配送備註<textarea rows={2} value={form.deliveryNote} onChange={(event) => setForm((current) => ({ ...current, deliveryNote: event.target.value }))} /></label><label className="full">申請說明<textarea rows={3} value={form.reasonDetail} onChange={(event) => setForm((current) => ({ ...current, reasonDetail: event.target.value }))} maxLength={500} /></label>
   </div><div className="modal-actions"><button className="button button-secondary" onClick={onClose} disabled={busy}>取消</button><button className="button button-primary" disabled={busy || !complete} onClick={() => { setBusy(true); void onSubmit({ orderId: order.id, ...form }).finally(() => setBusy(false)); }}>{busy ? "正在送出…" : "送出訂單修改申請"}</button></div></ModalShell>;
 }
-const farmerEvidenceRequirements = [
-  { type: "產銷履歷佐證", title: "產銷履歷與批次資訊", description: "履歷編號、作物批次與採收日期" },
-  { type: "無農藥檢測", title: "無農藥殘留檢測", description: "認證檢驗單位出具的完整報告" },
-  { type: "友善耕作紀錄", title: "友善耕作與資材紀錄", description: "施作、用水、肥培與病蟲害管理紀錄" },
-  { type: "低碳作業證明", title: "低碳設備使用證明", description: "節水或節能設備的使用與成效紀錄" },
-  { type: "土壤檢測報告", title: "土壤健康檢測報告", description: "土壤有機質、酸鹼值與改善建議" },
-  { type: "生態棲地紀錄", title: "生態棲地觀察紀錄", description: "授粉昆蟲、田間棲地或生物多樣性紀錄" },
+type GreenFinDocumentRow = { id: string; original_name: string; domain: string; source_level: string; status: string; created_at: string };
+type GreenFinActionRow = { id: string; dimension: string; action_level: string; description: string; action_date: string; is_active: number };
+type GreenFinResultPayload = { experience: Array<Record<string, unknown>>; indicators: Array<Record<string, unknown>>; dataHealth: Array<Record<string, unknown>>; notice?: string };
+const greenFinDomains = [
+  ["IDENTITY", "身分與資格"], ["LAND_CROP", "土地與作物"], ["TRANSACTION", "經營與交易"],
+  ["INPUT_EQUIPMENT", "投入與設備"], ["GREEN_ACTION", "綠色行動"], ["CERTIFICATION", "認證與治理"], ["LOAN_PURPOSE", "申貸用途"],
 ] as const;
 
-function FarmerEvidencePage({
-  records,
-  busy,
-  onUpload,
-  onFunding,
-}: {
-  records: BackendSnapshot["evidence"];
-  busy: boolean;
-  onUpload: (title: string, evidenceType: string, file: File) => Promise<boolean>;
-  onFunding: () => void;
+function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onToast }: {
+  busy: boolean; csrfToken: string; role: LoginRole;
+  onUpload: (domain: string, uploadNote: string, file: File) => Promise<boolean>;
+  onToast: (message: string) => void;
 }) {
-  const missingRequirements = farmerEvidenceRequirements.filter((requirement) => !records.some((record) => record.evidenceType === requirement.type));
-  const [selectedType, setSelectedType] = useState<string>(farmerEvidenceRequirements[2].type);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
+  const [section, setSection] = useState<"dashboard" | "documents" | "actions" | "experience" | "indicators" | "health">("dashboard");
+  const [documents, setDocuments] = useState<GreenFinDocumentRow[]>([]);
+  const [actions, setActions] = useState<GreenFinActionRow[]>([]);
+  const [results, setResults] = useState<GreenFinResultPayload>({ experience: [], indicators: [], dataHealth: [] });
+  const [domain, setDomain] = useState("GREEN_ACTION");
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [actionDraft, setActionDraft] = useState({ dimension: "減量", actionLevel: "BASIC", description: "", actionDate: new Date().toISOString().slice(0, 10) });
+  const [working, setWorking] = useState(false);
 
-  const selectedRequirement = missingRequirements.find((requirement) => requirement.type === selectedType) ?? missingRequirements[0];
+  const headers = { "x-gfes-role": role };
+  async function loadGreenFin() {
+    const [documentsResponse, resultsResponse, actionsResponse] = await Promise.all([
+      fetch("/api/greenfin/documents", { headers }), fetch("/api/greenfin/results", { headers }), fetch("/api/greenfin/actions", { headers }),
+    ]);
+    if (documentsResponse.ok) setDocuments(((await documentsResponse.json()) as { documents: GreenFinDocumentRow[] }).documents);
+    if (resultsResponse.ok) setResults(await resultsResponse.json() as GreenFinResultPayload);
+    if (actionsResponse.ok) setActions(((await actionsResponse.json()) as { actions: GreenFinActionRow[] }).actions);
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadGreenFin(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedRequirement || !selectedFile) return;
-    const uploaded = await onUpload(selectedRequirement.title, selectedRequirement.type, selectedFile);
-    if (!uploaded) return;
-    setSelectedFile(null);
-    setFileInputKey((current) => current + 1);
+  async function mutate(url: string, method: "PUT" | "PATCH" | "POST", payload: Record<string, unknown>, success: string) {
+    setWorking(true);
+    try {
+      const response = await fetch(url, { method, headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: JSON.stringify(payload) });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "GreenFin 操作失敗");
+      onToast(success); await loadGreenFin();
+    } catch (error) { onToast(error instanceof Error ? error.message : "GreenFin 操作失敗"); }
+    finally { setWorking(false); }
   }
 
-  return (
-    <div className="dashboard-grid">
-      <Panel className="span-7 subpage-primary" title="永續證明與農產履歷" note={`已上傳 ${farmerEvidenceRequirements.length - missingRequirements.length}／${farmerEvidenceRequirements.length} 項；保留未上傳項目供流程測試`}>
-        <div className="evidence-list">{farmerEvidenceRequirements.map((requirement) => {
-          const record = records.find((item) => item.evidenceType === requirement.type);
-          const note = record
-            ? `${record.status === "verified" ? "已驗證" : "已上傳・等待審核"}${record.fileName ? `・${record.fileName}` : ""}`
-            : `尚未上傳・${requirement.description}`;
-          return <Evidence key={requirement.type} title={requirement.title} note={note} done={Boolean(record)} />;
-        })}</div>
-      </Panel>
-      <Panel className="span-5" title={missingRequirements.length > 0 ? "測試上傳永續證明" : "永續證明已齊全"} note={missingRequirements.length > 0 ? "請選擇一個尚未上傳的項目與正式文件" : "所有必要文件都已寫入後台紀錄"}>
-        {selectedRequirement ? <form className="farmer-evidence-upload" onSubmit={submit}>
-          <label>尚未上傳項目<select value={selectedRequirement.type} onChange={(event) => { setSelectedType(event.target.value); setSelectedFile(null); setFileInputKey((current) => current + 1); }}>{missingRequirements.map((requirement) => <option value={requirement.type} key={requirement.type}>{requirement.title}</option>)}</select></label>
-          <div className="upload-box"><Upload /><b>{selectedFile?.name ?? "選擇 PDF 或圖片證明"}</b><small>{selectedRequirement.description}・檔案上限 10 MB</small><input key={fileInputKey} aria-label="選擇永續證明檔案" type="file" accept="application/pdf,image/*" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} /></div>
-          <div className="receipt-box"><Row label="證明類別" value={selectedRequirement.title} /><Row label="目前狀態" value="尚未上傳" /><Row label="送出後狀態" value="等待平台審核" /></div>
-          <button className="button button-primary button-block" type="submit" disabled={busy || !selectedFile}>{busy ? "正在上傳…" : "上傳並送交審核"}</button>
-        </form> : <Success title="履歷完整度已達 100%" text="消費者可在商品與支持頁看見最新證明。"><button className="button button-primary" onClick={onFunding}>前往農業資源兌換</button></Success>}
-      </Panel>
-    </div>
-  );
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!file) return;
+    const uploaded = await onUpload(domain, note, file);
+    if (uploaded) { setFile(null); setNote(""); await loadGreenFin(); }
+  }
+
+  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => [...new Map(rows.map((row) => [String(row[key]), row])).values()];
+  const indicators = latestBy(results.indicators, "indicator_type");
+  const health = latestBy(results.dataHealth, "domain");
+  const experienceTotal = results.experience.reduce((sum, row) => sum + Number(row.effective_value ?? 0), 0);
+  return <div className="dashboard-grid">
+    <Panel className="span-12 subpage-primary" title="GreenFin 綠色數位履歷" note="Evidence First・Rule Driven・Explainable；不等同信用評分或自動核貸">
+      <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health" }[item]}</button>)}</div>
+    </Panel>
+    {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><small>規則版本：GREENFIN_DEMO_V1</small></Panel>}
+    {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
+    {(section === "dashboard" || section === "health") && <Panel className="span-4" title="Data Health" note="GRAY／RED／YELLOW／GREEN"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={String(item.status)} done={item.status === "GREEN"} />) : <p className="empty-copy">尚未計算資料健康度。</p>}</div></Panel>}
+    {section === "documents" && <><Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式"><form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、圖片或 XLSX"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept="application/pdf,image/*,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 SIMULATED OCR</button></form></Panel><Panel className="span-7" title="文件處理佇列" note={`${documents.length} 份 GreenFin 文件`}>{documents.length ? <div className="evidence-list">{documents.map((document) => <article className="evidence-item" key={document.id}><div><strong>{document.original_name}</strong><small>{document.domain}・{document.source_level}・{document.status}</small></div><div className="inline-actions">{document.status === "OCR_COMPLETED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PUT", { documentId: document.id, corrections: {} }, "OCR 欄位已確認")}>確認欄位</button>}{document.status === "FIELDS_CONFIRMED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PATCH", { documentId: document.id }, "文件已正規化")}>正規化</button>}{document.status === "NORMALIZED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/verification", "POST", { documentId: document.id }, "來源核驗與異常檢查完成")}>核驗</button>}</div></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件。</p>}</Panel></>}
+    {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；實際認列仍依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "" }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim()}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}`} done={Boolean(item.is_active)} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
+    {section !== "documents" && section !== "actions" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
+  </div>;
 }
 
 function FarmerFundingPage({

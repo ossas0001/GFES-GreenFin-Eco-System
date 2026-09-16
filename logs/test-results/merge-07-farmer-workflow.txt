@@ -1,0 +1,16 @@
+Gate: MERGE-07 — Farmer GreenFin workflow
+Date: 2026-09-17
+Result: PASS
+
+Commands and results:
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 31 tests, 0 failures
+
+Functional checks:
+- Verified the farmer navigation replaces the legacy evidence page with GreenFin digital profile.
+- Verified six farmer work areas: overview, documents/OCR, green actions, experience, four indicators and Data Health.
+- Verified document upload, field confirmation, normalization, source verification and recalculation actions are wired to GreenFin APIs.
+- Verified green-action mutations use the shared GFES farmer session, CSRF protection and evidence ownership checks.
+- Verified the UI states that GreenFin is not a credit score or automated loan decision and contains no combined-score or loan recommendation output.
+- Browser QA passed at /farmer?section=greenfin after a clean development-server restart.

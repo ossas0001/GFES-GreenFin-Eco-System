@@ -219,9 +219,9 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /送出後由管理員審核，核准才會發放綠點/);
   assert.match(demo, /查看正式繳交文件範例/);
   assert.match(demo, /不接受無關的一般照片/);
-  assert.match(demo, /farmerEvidenceRequirements/);
-  assert.match(demo, /選擇永續證明檔案/);
-  assert.match(demo, /上傳並送交審核/);
+  assert.match(demo, /FarmerGreenFinPage/);
+  assert.match(demo, /選擇 PDF、圖片或 XLSX/);
+  assert.match(demo, /上傳並執行 SIMULATED OCR/);
   assert.match(uploadRoute, /submissionType === "farmer_evidence"/);
   assert.match(uploadRoute, /farmer-evidence\//);
   assert.match(schema, /fileKey: text\("file_key"\)/);
@@ -245,7 +245,8 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /busy \|\| !viewed \|\| !noteReady/);
   assert.match(demo, /每件 600 點/);
   assert.match(demo, /成果透明度/);
-  assert.doesNotMatch(demo, /綠色信用|信用評分|融資|授信|金融合作機構/);
+  assert.match(demo, /不等同信用評分或自動核貸/);
+  assert.doesNotMatch(demo, /信用總分|核貸建議|建議額度|建議利率/);
   assert.match(css, /\.order-layout/);
   assert.match(css, /\.role-cycle-node\.dimmed/);
   assert.match(css, /@keyframes role-cycle-spin-counterclockwise \{ to \{ transform: rotate\(-360deg\); \} \}/);
