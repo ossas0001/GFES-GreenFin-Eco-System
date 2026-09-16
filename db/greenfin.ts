@@ -1,3 +1,5 @@
+import { GREENFIN_DEMO_RULE_CONFIG, GREENFIN_RULE_VERSION } from "../worker/greenfin/rules/demo-v1.mjs";
+
 /** GreenFin D1 schema bootstrap used by local/demo environments.
  * Production deployments apply the equivalent versioned Drizzle migration.
  */
@@ -36,4 +38,8 @@ export async function ensureGreenFinSchema(db: D1Database) {
   ];
 
   await db.batch(statements.map((statement) => db.prepare(statement)));
+  await db.prepare(`INSERT OR IGNORE INTO greenfin_rule_sets
+    (version, name, description, config_json, is_active)
+    VALUES (?, 'Demo Rule Set V1', 'Initial versioned demo rules for GreenFin calculations.', ?, 1)`)
+    .bind(GREENFIN_RULE_VERSION, JSON.stringify(GREENFIN_DEMO_RULE_CONFIG)).run();
 }

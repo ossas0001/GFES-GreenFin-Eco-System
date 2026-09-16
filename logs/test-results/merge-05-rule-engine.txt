@@ -1,0 +1,17 @@
+Gate: MERGE-05 — Versioned rule engine
+Date: 2026-09-16
+Result: PASS
+
+Commands and results:
+- node --test tests/greenfin-rules.test.mjs: PASS; 4 tests
+- npx tsc --noEmit: PASS
+- npm run lint: PASS; 0 errors, 26 warnings
+- npm test: PASS; production build and 24 tests, 0 failures
+
+Functional checks:
+- Verified rule version is GREENFIN_DEMO_V1.
+- Verified four experience dimensions, 250 annual per-dimension cap and 1,000 total cap.
+- Verified base values 20/50/100 and source ratios V3=1, V2=1, V1=0.5, V0=0.
+- Verified calculation trace preserves version, timestamp, evidence IDs and formula details.
+- Verified historical rule configuration remains independent of the active version.
+- Verified authenticated rules API and insert-once D1 seeding.

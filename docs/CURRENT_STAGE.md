@@ -14,7 +14,7 @@
 | MERGE-02 | D1 core model and migrations | PASS |
 | MERGE-03 | Document／OCR／normalization pipeline | PASS |
 | MERGE-04 | Verification and anomalies | PASS |
-| MERGE-05 | Versioned rule engine | NOT STARTED |
+| MERGE-05 | Versioned rule engine | PASS |
 | MERGE-06 | Experience, indicators and Data Health | NOT STARTED |
 | MERGE-07 | Farmer GreenFin workflow | NOT STARTED |
 | MERGE-08 | Authorization and bank workflow | NOT STARTED |

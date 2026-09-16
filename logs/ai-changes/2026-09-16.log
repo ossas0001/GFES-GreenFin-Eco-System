@@ -67,3 +67,17 @@
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
 - `npm test`: PASS (production build includes `/api/greenfin/verification`; 20 tests passed, 0 failed).
+
+## MERGE-05 — Versioned rule engine
+
+- Added the centralized `GREENFIN_DEMO_V1` rule configuration for experience, four indicators and Data Health.
+- Seeded the default rule into D1 with `INSERT OR IGNORE`, preserving historical rule versions rather than overwriting them.
+- Added typed validation, indicator level mapping and calculation trace creation.
+- Moved required-field anomaly configuration to the centralized rule source.
+- Added authenticated `/api/greenfin/rules` access for farmers, institutions and administrators, including historical version lookup.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (production build includes `/api/greenfin/rules`; 24 tests passed, 0 failed).
