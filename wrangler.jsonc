@@ -1,8 +1,8 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "gfes-greenfin-eco-system",
+  "name": "gfes-green-consumption-backend",
   "main": "./worker/index.ts",
-  "workers_dev": true,
+  "workers_dev": false,
   "compatibility_date": "2026-05-22",
   "compatibility_flags": ["nodejs_compat"],
   "keep_vars": true,
@@ -10,7 +10,7 @@
     "enabled": true
   },
   "vars": {
-    "GOOGLE_REDIRECT_URI": "https://gfes-greenfin-eco-system.crypto-magician.workers.dev/api/auth/google/callback"
+    "GOOGLE_REDIRECT_URI": "https://gfes-green-consumption.pages.dev/api/auth/google/callback"
   },
   "d1_databases": [
     {

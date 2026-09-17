@@ -10,12 +10,12 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 
 - 合併後公開原始碼：[ossas0001/GFES-GreenFin-Eco-System](https://github.com/ossas0001/GFES-GreenFin-Eco-System)
 
-完整 GreenFin 合併版已使用隔離的 Cloudflare Worker、D1 與 R2 正式部署：
+完整 GreenFin 合併版已使用原本的 Cloudflare Pages 網址正式部署，後端資料仍使用隔離的 D1 與 R2：
 
-- 消費者入口：[https://gfes-greenfin-eco-system.crypto-magician.workers.dev/](https://gfes-greenfin-eco-system.crypto-magician.workers.dev/)
-- 合作小農後台：[https://gfes-greenfin-eco-system.crypto-magician.workers.dev/farmer](https://gfes-greenfin-eco-system.crypto-magician.workers.dev/farmer)
-- 銀行／政府／企業後台：[https://gfes-greenfin-eco-system.crypto-magician.workers.dev/institution](https://gfes-greenfin-eco-system.crypto-magician.workers.dev/institution)
-- 平台管理員後台：[https://gfes-greenfin-eco-system.crypto-magician.workers.dev/admin](https://gfes-greenfin-eco-system.crypto-magician.workers.dev/admin)
+- 消費者入口：[https://gfes-green-consumption.pages.dev/](https://gfes-green-consumption.pages.dev/)
+- 合作小農後台：[https://gfes-green-consumption.pages.dev/farmer](https://gfes-green-consumption.pages.dev/farmer)
+- 銀行／政府／企業後台：[https://gfes-green-consumption.pages.dev/institution](https://gfes-green-consumption.pages.dev/institution)
+- 平台管理員後台：[https://gfes-green-consumption.pages.dev/admin](https://gfes-green-consumption.pages.dev/admin)
 
 部署資源、驗證結果與剩餘選用憑證請見 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
@@ -118,7 +118,7 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 
 消費者、合作小農及銀行／政府／企業可從登入視窗建立唯一的使用者名稱與電子信箱，之後可使用其中任一項登入；帳號會寫入 D1 並依所選角色進入對應介面，平台管理員不開放自行註冊。消費者註冊後可直接使用；合作小農及銀行／政府／企業需等待管理員審核，審核畫面會提示約需 1～3 個工作天。
 
-Google 登入採 OAuth 2.0／OpenID Connect 授權碼流程、`state` 驗證與 PKCE，需設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_REDIRECT_URI`，並在 Google Cloud Console 登錄完全相同的 `https://gfes-greenfin-eco-system.crypto-magician.workers.dev/api/auth/google/callback`。
+Google 登入採 OAuth 2.0／OpenID Connect 授權碼流程、`state` 驗證與 PKCE，需設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_REDIRECT_URI`，並在 Google Cloud Console 登錄完全相同的 `https://gfes-green-consumption.pages.dev/api/auth/google/callback`。
 
 ## 2026-08-10 更新內容
 

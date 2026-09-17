@@ -17,8 +17,11 @@ Checks:
 - npm test: PASS (37 passed, 0 failed).
 - npm run test:security:local: PASS (all three security scripts).
 - Production deployment: PASS.
-- Production URL: https://gfes-greenfin-eco-system.crypto-magician.workers.dev
-- Worker version: 3ec1f56d-1bf1-42ed-8a43-82a41f4c9f34.
+- Canonical production URL: https://gfes-green-consumption.pages.dev
+- Pages deployment: 8920b8fc-6a56-4791-8834-58a749a39a41.
+- Backend Worker: gfes-green-consumption-backend.
+- Backend Worker version: df0c2140-1fc6-42f4-b1b8-838038580f04.
 - Online smoke tests: root 200, /api/public 200, farmer 200, institution 200, admin 200; all four Demo logins returned 200.
 - Browser QA: farmer GreenFin and institution GreenFin authorization workspace rendered successfully.
-- Existing gfes-green-consumption-* Worker, D1 and R2 were not modified.
+- Original Pages and backend Worker names were retained to preserve the URLs; their runtime now uses the isolated merged-project D1 and R2.
+- Existing gfes-green-consumption-db and gfes-green-consumption-uploads data resources were not reused or modified.

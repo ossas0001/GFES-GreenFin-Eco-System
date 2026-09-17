@@ -71,3 +71,22 @@
 - `npx wrangler deploy --dry-run`: PASS; D1, R2, Images and final callback bindings detected.
 - Production smoke test: PASS for root, public API, farmer, institution and admin routes; all four Demo account logins returned HTTP 200.
 - Browser QA: PASS for farmer GreenFin digital profile and institution GreenFin authorization workspace.
+
+## MERGE-10 — Restore original public URL
+
+- Kept `https://gfes-green-consumption.pages.dev` as the canonical public URL at the owner's request.
+- Deployed the merged backend as `gfes-green-consumption-backend` while retaining the new isolated D1 `gfes-greenfin-eco-system-db` and R2 `gfes-greenfin-eco-system-uploads` bindings.
+- Added a Pages advanced-mode proxy at `pages/_worker.js`; the existing `BACKEND` Service Binding forwards the original Pages hostname to the merged Worker.
+- Updated the Google callback URL, public links, current-stage record and deployment handoff to the original hostname.
+- Deployed backend Worker version `df0c2140-1fc6-42f4-b1b8-838038580f04` and Pages deployment `8920b8fc-6a56-4791-8834-58a749a39a41`.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 non-blocking warnings).
+- `npm test`: PASS (37 passed, 0 failed).
+- `npm run test:security:local`: PASS.
+- `npx wrangler deploy --dry-run`: PASS with isolated D1 and R2 bindings and the original callback URL.
+- Production smoke test on the original hostname: PASS for root, public API, farmer, institution and admin routes.
+- All four Demo account logins and session checks returned HTTP 200.
+- Browser QA: PASS for `GreenFin 綠色數位履歷` and `GreenFin 授權案件` on the original hostname.
