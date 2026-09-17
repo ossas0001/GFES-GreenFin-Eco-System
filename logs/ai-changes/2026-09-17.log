@@ -52,3 +52,22 @@
 - Added a Cloudflare deployment handoff that separates the recommended new-resource path from the explicitly approved existing-resource path.
 - Clarified in the README that the existing GFES Pages URL does not yet contain the complete merged release.
 - Verified Wrangler `4.92.0` and a successful deploy dry run; no production resources were changed.
+
+## MERGE-10 — Isolated Cloudflare production deployment
+
+- Authenticated Wrangler through the owner's Cloudflare OAuth flow without exposing a token in chat or committing credentials.
+- Created isolated APAC D1 `gfes-greenfin-eco-system-db` and R2 bucket `gfes-greenfin-eco-system-uploads`; the previous GFES resources were not modified.
+- Updated Worker bindings, enabled the dedicated workers.dev route and set the final Google callback URL.
+- Applied all 25 project migrations to the new remote D1 database.
+- Added `.wrangler/**` to ESLint global ignores so generated deploy bundles cannot pollute source lint results.
+- Deployed Worker version `3ec1f56d-1bf1-42ed-8a43-82a41f4c9f34` to `https://gfes-greenfin-eco-system.crypto-magician.workers.dev`.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 non-blocking warnings).
+- `npm test`: PASS (37 passed, 0 failed).
+- `npm run test:security:local`: PASS after initializing the isolated local D1 through `/api/public`.
+- `npx wrangler deploy --dry-run`: PASS; D1, R2, Images and final callback bindings detected.
+- Production smoke test: PASS for root, public API, farmer, institution and admin routes; all four Demo account logins returned HTTP 200.
+- Browser QA: PASS for farmer GreenFin digital profile and institution GreenFin authorization workspace.

@@ -19,6 +19,6 @@
 | MERGE-07 | Farmer GreenFin workflow | PASS |
 | MERGE-08 | Authorization and bank workflow | PASS |
 | MERGE-09 | Traceability, report and full regression | PASS |
-| MERGE-10 | Public GitHub and deployment handoff | PASS — production deploy awaits owner resource choice |
+| MERGE-10 | Public GitHub and isolated Cloudflare deployment | PASS — production deployed and verified |
 
-MERGE-09 已通過；合併版本達到本機 Demo Ready。正式部署前仍須由 repository owner 選擇建立全新 Cloudflare 資源，或明確核准沿用既有 GFES D1／R2。
+MERGE-10 已通過；合併版本已使用全新且隔離的 Cloudflare Worker、D1 與 R2 正式部署，未修改舊 GFES 資源。正式網址：`https://gfes-greenfin-eco-system.crypto-magician.workers.dev`。Google 登入仍需另行設定 OAuth Client ID／Secret；內建 Demo 帳號登入與 GreenFin 核心流程已線上驗證。
