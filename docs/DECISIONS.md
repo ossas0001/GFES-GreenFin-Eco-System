@@ -2,7 +2,7 @@
 
 ## ADR-M001 — GFES is the merged runtime
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-09-16
 
 以 GFES 的 Next.js／Cloudflare／D1／R2 架構、角色與登入為合併後唯一 runtime。GreenFin 的 React 畫面及 Python domain logic 依 Gate 移植，不保留第二套登入與正式 JSON store。
@@ -27,3 +27,10 @@
 **Date:** 2026-09-16
 
 GFES profiles、accounts 與 sessions 是唯一身分來源；既有 `evidence` 與 R2 上傳能力延伸為 GreenFin Document，不建立互相不同步的第二份小農或文件資料。
+
+## ADR-M005 — Public GreenFin level is experience-only
+
+**Status:** Accepted
+**Date:** 2026-09-17
+
+對消費者公開的小農 GreenFin 等級只由目前規則版本的綠色經驗值後端換算，並與四大分析指標及 Data Health 保持獨立。公開畫面同時聲明該等級代表可追溯綠色行動經驗，不是信用評分、核貸判斷或額度／利率建議。

@@ -90,3 +90,22 @@
 - Production smoke test on the original hostname: PASS for root, public API, farmer, institution and admin routes.
 - All four Demo account logins and session checks returned HTTP 200.
 - Browser QA: PASS for `GreenFin 綠色數位履歷` and `GreenFin 授權案件` on the original hostname.
+
+## MERGE-11 — GreenFin workspace progress and public farmer levels
+
+- Expanded the farmer `GreenFin 綠色數位履歷` entry into a complete in-platform workspace covering overview, documents／OCR, green actions, experience, four independent indicators, Data Health and bank authorization.
+- Added a backend-derived five-stage GreenFin progress summary and surfaced it on the farmer dashboard with the next required action.
+- Added backend-derived GreenFin experience totals, L0–L5 labels and four dimensions, filtered to the active rule version; removed experience aggregation from the frontend.
+- Exposed each farmer's current GreenFin experience level on public stories／news and consumer project／product cards, with an explicit non-credit-score disclaimer.
+- Kept the canonical public URL unchanged at `https://gfes-green-consumption.pages.dev`.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (41 passed, 0 failed).
+- `npm run test:security:local`: PASS, including authentication, role isolation, CSRF, ownership, double-spend, duplicate reward, upload validation and session revocation checks.
+- `npx wrangler deploy --dry-run`: PASS with the isolated D1／R2 bindings and unchanged original callback URL.
+- Deployed backend Worker version `35db7a7a-5980-4da5-9840-12200170cdff`.
+- Browser QA: PASS on the farmer dashboard and GreenFin workspace; PASS on the public homepage, consumer overview and consumer local-support project／product lists.
+- Production Browser QA: PASS on `https://gfes-green-consumption.pages.dev`; the farmer dashboard／workspace and consumer project／product lists display the new progress and levels.

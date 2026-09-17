@@ -1,6 +1,8 @@
 import { getDb } from "./index";
 import { createPasswordCredential } from "./credentials";
 import { ensureGreenFinSchema } from "./greenfin";
+import { loadGreenFinRuleEngine } from "../worker/greenfin/rules/engine";
+import { buildGreenFinProgress, GREENFIN_LEVEL_LABELS, greenFinExperienceLevel } from "../worker/greenfin/services/progress";
 
 export const CONSUMER_ID = "consumer-001";
 export const FARMER_ID = "farmer-001";
@@ -1448,6 +1450,7 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
 }
 
 export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consumer" | "farmer" | "institution" | "admin"; profileId: string }) {
+  const greenFinRuleEngine = await loadGreenFinRuleEngine(db);
   const consumerId = viewer?.role === "consumer" ? viewer.profileId : viewer ? "__no_consumer__" : CONSUMER_ID;
   const farmerId = viewer?.role === "farmer" ? viewer.profileId : viewer ? "__no_farmer__" : FARMER_ID;
   const institutionId = viewer?.role === "institution" ? viewer.profileId : viewer ? "__no_institution__" : INSTITUTION_ID;
@@ -1498,6 +1501,40 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
   const merchantRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM merchant_offers WHERE status = 'active' ORDER BY distance_km");
   const registrationRows = await queryAll<{ action_id: string }>(db, "SELECT action_id FROM local_action_registrations WHERE consumer_id = ? AND status = 'registered' AND attendee_name <> ''", consumerId);
   const farmerRows = await queryAll<Record<string, unknown>>(db, "SELECT id, display_name, city, district FROM profiles WHERE role = 'farmer' ORDER BY display_name");
+  const greenFinExperienceRows = await queryAll<{ farmer_id: string; experience_total: number }>(db,
+    "SELECT farmer_id, COALESCE(SUM(effective_value), 0) AS experience_total FROM greenfin_experience_transactions WHERE rule_version = ? GROUP BY farmer_id",
+    greenFinRuleEngine.version,
+  );
+  const greenFinExperienceByFarmer = new Map(greenFinExperienceRows.map((row) => [row.farmer_id, Number(row.experience_total)]));
+  const greenFinForFarmer = (id: unknown) => {
+    const experienceTotal = greenFinExperienceByFarmer.get(String(id)) ?? 0;
+    const level = greenFinExperienceLevel(greenFinRuleEngine, experienceTotal);
+    return { greenFinExperience: experienceTotal, greenFinLevel: level, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[level] };
+  };
+  const greenFinProgressStats = viewer?.role === "farmer"
+    ? await queryOne<Record<string, number>>(db, `SELECT
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ?) AS document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('NORMALIZED', 'VERIFIED')) AS processed_document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status = 'VERIFIED') AS verified_document_count,
+        (SELECT COUNT(*) FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1) AS action_count,
+        (SELECT COUNT(*) FROM greenfin_experience_transactions WHERE farmer_id = ? AND rule_version = ?) AS experience_transaction_count,
+        (SELECT COUNT(DISTINCT indicator_type) FROM greenfin_indicator_results WHERE farmer_id = ? AND rule_version = ?) AS indicator_count,
+        (SELECT COUNT(DISTINCT domain) FROM greenfin_data_health_results WHERE farmer_id = ? AND rule_version = ?) AS data_health_count,
+        (SELECT COUNT(*) FROM greenfin_anomalies anomaly JOIN greenfin_standardized_records record ON record.id = anomaly.record_id WHERE record.farmer_id = ? AND anomaly.is_resolved = 0) AS unresolved_anomaly_count`,
+      farmerId, farmerId, farmerId, farmerId, farmerId, greenFinRuleEngine.version,
+      farmerId, greenFinRuleEngine.version, farmerId, greenFinRuleEngine.version, farmerId)
+    : null;
+  const currentFarmerGreenFin = greenFinForFarmer(farmerId);
+  const greenFinProgress = buildGreenFinProgress({
+    documentCount: Number(greenFinProgressStats?.document_count ?? 0),
+    processedDocumentCount: Number(greenFinProgressStats?.processed_document_count ?? 0),
+    verifiedDocumentCount: Number(greenFinProgressStats?.verified_document_count ?? 0),
+    actionCount: Number(greenFinProgressStats?.action_count ?? 0),
+    experienceTransactionCount: Number(greenFinProgressStats?.experience_transaction_count ?? 0),
+    indicatorCount: Number(greenFinProgressStats?.indicator_count ?? 0),
+    dataHealthCount: Number(greenFinProgressStats?.data_health_count ?? 0),
+    unresolvedAnomalyCount: Number(greenFinProgressStats?.unresolved_anomaly_count ?? 0),
+  });
   const farmerStoryRow = await queryOne<Record<string, unknown>>(db, "SELECT fs.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id WHERE fs.farmer_id = ?", farmerId);
   const farmerNewsRows = await queryAll<Record<string, unknown>>(db, "SELECT fn.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id WHERE fn.farmer_id = ? ORDER BY fn.updated_at DESC, fn.created_at DESC", farmerId);
   const consumerNewsRows = await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district
@@ -1556,6 +1593,7 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     district: row.district,
     distance: Number(row.distance_km),
     proof: row.proof,
+    ...greenFinForFarmer(row.farmer_id),
   });
   const productToFarmer = (row: Record<string, unknown>) => ({
     id: row.id,
@@ -1599,18 +1637,21 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     allocations: parse(row.allocations_json as string, []),
     story: parse(row.story_json as string, {}),
     status: row.status,
+    ...greenFinForFarmer(row.farmer_id),
   });
   const storyToPublic = (row: Record<string, unknown>) => ({
     farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
     headline: String(row.headline), summary: String(row.summary), body: String(row.body), quote: String(row.quote ?? ""),
     image: String(row.image_url ?? ""), imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status),
     updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
+    ...greenFinForFarmer(row.farmer_id),
   });
   const newsToPublic = (row: Record<string, unknown>) => ({
     id: String(row.id), farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
     title: String(row.title), content: String(row.content), category: String(row.category), image: String(row.image_url ?? ""),
     imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status), createdAt: String(row.created_at),
     updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
+    ...greenFinForFarmer(row.farmer_id),
   });
 
   return {
@@ -1634,12 +1675,20 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
       updatedAt: String(consumerSettingsRow?.updated_at ?? ""),
     },
     farmer: { id: farmer?.id ?? farmerId, displayName: farmer?.display_name ?? "合作小農", city: farmer?.city ?? "雲林縣", district: farmer?.district ?? "斗六市", points: await balance(db, farmerId) },
+    greenFin: {
+      experienceTotal: currentFarmerGreenFin.greenFinExperience,
+      level: currentFarmerGreenFin.greenFinLevel,
+      levelLabel: currentFarmerGreenFin.greenFinLevelLabel,
+      totalLimit: greenFinRuleEngine.experience.totalLimit,
+      ruleVersion: greenFinRuleEngine.version,
+      ...greenFinProgress,
+    },
     institution: { id: institution?.id ?? institutionId, displayName: institution?.display_name ?? "合作機構", city: institution?.city ?? "台北市", district: institution?.district ?? "信義區" },
     products: productsRows.map(productToFarmer),
     productsForConsumer: productsRows.map(productToProject),
     projects: projectRows.map(projectToLocal),
     catalog: [...projectRows.map(projectToLocal), ...productsRows.map(productToProject)],
-    farmers: farmerRows.map((row) => ({ id: row.id, name: row.display_name, area: row.city, district: row.district })),
+    farmers: farmerRows.map((row) => ({ id: row.id, name: row.display_name, area: row.city, district: row.district, ...greenFinForFarmer(row.id) })),
     farmerStory: farmerStoryRow ? storyToPublic(farmerStoryRow) : null,
     farmerNews: farmerNewsRows.map(newsToPublic),
     consumerNews: consumerNewsRows.map(newsToPublic),
@@ -1683,24 +1732,37 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
 }
 
 export async function getPublicPlatformContent(db: DbBinding) {
+  const greenFinRuleEngine = await loadGreenFinRuleEngine(db);
   const storyRows = await queryAll<Record<string, unknown>>(db, `SELECT fs.*, p.display_name AS farmer_name, p.city, p.district
     FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id
     WHERE fs.status = 'published' ORDER BY fs.published_at DESC, fs.updated_at DESC LIMIT 12`);
   const newsRows = await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district
     FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id
     WHERE fn.status = 'published' ORDER BY fn.published_at DESC, fn.updated_at DESC LIMIT 12`);
+  const experienceRows = await queryAll<{ farmer_id: string; experience_total: number }>(db,
+    "SELECT farmer_id, COALESCE(SUM(effective_value), 0) AS experience_total FROM greenfin_experience_transactions WHERE rule_version = ? GROUP BY farmer_id",
+    greenFinRuleEngine.version,
+  );
+  const experienceByFarmer = new Map(experienceRows.map((row) => [row.farmer_id, Number(row.experience_total)]));
+  const publicGreenFin = (farmerId: unknown) => {
+    const greenFinExperience = experienceByFarmer.get(String(farmerId)) ?? 0;
+    const greenFinLevel = greenFinExperienceLevel(greenFinRuleEngine, greenFinExperience);
+    return { greenFinExperience, greenFinLevel, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[greenFinLevel] };
+  };
   return {
     stories: storyRows.map((row) => ({
       farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
       headline: String(row.headline), summary: String(row.summary), body: String(row.body), quote: String(row.quote ?? ""),
       image: String(row.image_url ?? ""), imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status),
       updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
+      ...publicGreenFin(row.farmer_id),
     })),
     news: newsRows.map((row) => ({
       id: String(row.id), farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
       title: String(row.title), content: String(row.content), category: String(row.category), image: String(row.image_url ?? ""),
       imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status), createdAt: String(row.created_at),
       updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
+      ...publicGreenFin(row.farmer_id),
     })),
   };
 }

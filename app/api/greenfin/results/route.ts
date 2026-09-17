@@ -4,6 +4,7 @@ import { greenFinAuditStatement } from "../../../../worker/greenfin/audit";
 import { isGreenFinDataDomain, isGreenFinSourceLevel } from "../../../../worker/greenfin/domain";
 import { loadGreenFinRuleEngine } from "../../../../worker/greenfin/rules/engine";
 import { calculateDataHealthResults, calculateExperienceResults, calculateIndicatorResults, type CalculationAction, type CalculationAnomaly, type CalculationRecord } from "../../../../worker/greenfin/services/calculation/results";
+import { buildGreenFinProgress, summarizeGreenFinExperience } from "../../../../worker/greenfin/services/progress";
 
 function parseJson<T>(value: unknown, fallback: T): T { try { return value ? JSON.parse(String(value)) as T : fallback; } catch { return fallback; } }
 function errorResponse(error: unknown, fallback: string) { return Response.json({ error: error instanceof Error ? error.message : fallback }, { status: error instanceof AuthError ? error.status : 400 }); }
@@ -64,11 +65,44 @@ export async function GET(request: Request) {
     const farmerId = session.role === "farmer" ? session.profileId : requested;
     if (!farmerId) return Response.json({ error: "缺少小農識別碼" }, { status: 400 });
     const db = await getPlatformDb(); await ensurePlatformSchema(db);
-    const [experience, indicators, health] = await Promise.all([
-      db.prepare("SELECT * FROM greenfin_experience_transactions WHERE farmer_id = ? ORDER BY calculated_at DESC").bind(farmerId).all(),
-      db.prepare("SELECT * FROM greenfin_indicator_results WHERE farmer_id = ? ORDER BY calculated_at DESC").bind(farmerId).all(),
-      db.prepare("SELECT * FROM greenfin_data_health_results WHERE farmer_id = ? ORDER BY calculated_at DESC").bind(farmerId).all(),
+    const engine = await loadGreenFinRuleEngine(db);
+    const [experience, indicators, health, documentStats, actionCount, unresolvedAnomalyCount] = await Promise.all([
+      db.prepare("SELECT * FROM greenfin_experience_transactions WHERE farmer_id = ? AND rule_version = ? ORDER BY calculated_at DESC").bind(farmerId, engine.version).all<Record<string, unknown>>(),
+      db.prepare("SELECT * FROM greenfin_indicator_results WHERE farmer_id = ? AND rule_version = ? ORDER BY calculated_at DESC").bind(farmerId, engine.version).all<Record<string, unknown>>(),
+      db.prepare("SELECT * FROM greenfin_data_health_results WHERE farmer_id = ? AND rule_version = ? ORDER BY calculated_at DESC").bind(farmerId, engine.version).all<Record<string, unknown>>(),
+      db.prepare(`SELECT COUNT(*) AS document_count,
+        COALESCE(SUM(CASE WHEN status IN ('NORMALIZED', 'VERIFIED') THEN 1 ELSE 0 END), 0) AS processed_document_count,
+        COALESCE(SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END), 0) AS verified_document_count
+        FROM greenfin_documents WHERE farmer_id = ?`).bind(farmerId).first<Record<string, number>>(),
+      db.prepare("SELECT COUNT(*) AS count FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1").bind(farmerId).first<{ count: number }>(),
+      db.prepare(`SELECT COUNT(*) AS count FROM greenfin_anomalies anomaly
+        JOIN greenfin_standardized_records record ON record.id = anomaly.record_id
+        WHERE record.farmer_id = ? AND anomaly.is_resolved = 0`).bind(farmerId).first<{ count: number }>(),
     ]);
-    return Response.json({ farmerId, experience: experience.results ?? [], indicators: indicators.results ?? [], dataHealth: health.results ?? [], notice: "三類輸出彼此獨立，均非信用評分或自動核貸結果。" });
+    const experienceRows = experience.results ?? [];
+    const indicatorRows = indicators.results ?? [];
+    const healthRows = health.results ?? [];
+    const experienceSummary = summarizeGreenFinExperience(engine, experienceRows.map((row) => ({
+      dimension: String(row.dimension),
+      effectiveValue: Number(row.effective_value ?? 0),
+    })));
+    const progress = buildGreenFinProgress({
+      documentCount: Number(documentStats?.document_count ?? 0),
+      processedDocumentCount: Number(documentStats?.processed_document_count ?? 0),
+      verifiedDocumentCount: Number(documentStats?.verified_document_count ?? 0),
+      actionCount: Number(actionCount?.count ?? 0),
+      experienceTransactionCount: experienceRows.length,
+      indicatorCount: new Set(indicatorRows.map((row) => String(row.indicator_type))).size,
+      dataHealthCount: new Set(healthRows.map((row) => String(row.domain))).size,
+      unresolvedAnomalyCount: Number(unresolvedAnomalyCount?.count ?? 0),
+    });
+    return Response.json({
+      farmerId,
+      summary: { ...experienceSummary, ...progress },
+      experience: experienceRows,
+      indicators: indicatorRows,
+      dataHealth: healthRows,
+      notice: "三類輸出彼此獨立，均非信用評分或自動核貸結果。",
+    });
   } catch (error) { return errorResponse(error, "讀取 GreenFin 結果失敗"); }
 }

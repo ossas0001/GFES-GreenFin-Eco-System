@@ -1,0 +1,30 @@
+MERGE-11 — GreenFin workspace progress and public farmer levels
+Date: 2026-09-17
+
+npx tsc --noEmit
+PASS
+
+npm run lint
+PASS — 0 errors, 26 pre-existing non-blocking warnings
+
+npm test
+PASS — 41 tests passed, 0 failed; production build completed
+
+npm run test:security:local
+PASS — authentication, role isolation, CSRF, ownership, concurrent double-spend, duplicate reward, upload validation and session revocation checks
+
+npx wrangler deploy --dry-run
+PASS — isolated D1 and R2 bindings detected; original callback URL retained
+
+Browser functional verification
+PASS — farmer dashboard displays GreenFin progress and L0–L5 experience level
+PASS — GreenFin entry opens the complete in-platform workspace with five stages and all required tabs
+PASS — public homepage and consumer overview display farmer GreenFin levels
+PASS — consumer local-support project and product cards display farmer GreenFin levels
+
+Production deployment
+PASS — backend Worker version 35db7a7a-5980-4da5-9840-12200170cdff
+PASS — farmer dashboard／GreenFin workspace and consumer project／product lists verified on the canonical URL
+
+Canonical URL
+https://gfes-green-consumption.pages.dev
