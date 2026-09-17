@@ -109,3 +109,24 @@
 - Deployed backend Worker version `35db7a7a-5980-4da5-9840-12200170cdff`.
 - Browser QA: PASS on the farmer dashboard and GreenFin workspace; PASS on the public homepage, consumer overview and consumer local-support project／product lists.
 - Production Browser QA: PASS on `https://gfes-green-consumption.pages.dev`; the farmer dashboard／workspace and consumer project／product lists display the new progress and levels.
+
+## MERGE-12 — LV badges and document completion／verification demo
+
+- Added backend-derived public LV1–LV4 badges immediately after farmer names on consumer improvement-project and product cards; retained canonical L0–L5 details in the farmer workspace.
+- Added document detail retrieval with OCR fields, standardized record, latest verification result and anomaly review context.
+- Added actionable upload／pending-document controls and the complete field confirmation → standardization → source verification UI.
+- Added a farmer-only, CSRF-protected and idempotent `/api/greenfin/demo` fixture that writes explicitly marked DEMO／SIMULATED pending and verified documents to R2／D1 with audit events.
+- Corrected progress so pending documents or unresolved anomalies cannot produce 100%, and corrected newest-result selection in the workspace.
+- Changed repeated external verification submissions to a clear rejection so reward idempotency is deterministic under either request ordering.
+- Seeded the production Demo farmer with one pending document, one verified document and one simulated green action; all are visibly marked DEMO／SIMULATED.
+- Deployed backend Worker version `b0ac9f2c-403e-480e-b5f2-ee4c125a304f` while retaining `https://gfes-green-consumption.pages.dev`.
+
+### Verification
+
+- `npx tsc --noEmit`: PASS.
+- `npm run lint`: PASS (0 errors, 26 pre-existing non-blocking warnings).
+- `npm test`: PASS (47 passed, 0 failed).
+- `npm run test:security:local`: PASS after making duplicate-verification rejection deterministic.
+- `npx wrangler deploy --dry-run`: PASS with unchanged isolated D1／R2 bindings and callback URL.
+- Local Browser QA: PASS for DEMO creation, pending-field editing, standardization, verification, anomaly retention, 80% unresolved-anomaly progress and consumer card badge placement.
+- Production Browser QA: PASS for 40% pending-document progress, latest analysis results, DEMO pending／verified documents and consumer LV badge placement.

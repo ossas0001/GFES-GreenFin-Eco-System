@@ -84,9 +84,15 @@ export async function GET(request: Request) {
       ? await db.prepare("SELECT * FROM greenfin_documents WHERE id = ?").bind(documentId).first<Record<string, unknown>>()
       : await db.prepare("SELECT * FROM greenfin_documents WHERE id = ? AND farmer_id = ?").bind(documentId, session.profileId).first<Record<string, unknown>>();
     if (!document) return Response.json({ error: "找不到 GreenFin 文件" }, { status: 404 });
-    const fields = await db.prepare("SELECT * FROM greenfin_document_fields WHERE document_id = ? ORDER BY created_at, id").bind(documentId).all();
-    const record = await db.prepare("SELECT * FROM greenfin_standardized_records WHERE document_id = ? ORDER BY created_at DESC LIMIT 1").bind(documentId).first();
-    return Response.json({ document, fields: fields.results ?? [], record });
+    const [fields, record, verification, anomalies] = await Promise.all([
+      db.prepare("SELECT * FROM greenfin_document_fields WHERE document_id = ? ORDER BY created_at, id").bind(documentId).all(),
+      db.prepare("SELECT * FROM greenfin_standardized_records WHERE document_id = ? ORDER BY created_at DESC LIMIT 1").bind(documentId).first<Record<string, unknown>>(),
+      db.prepare(`SELECT verification.* FROM greenfin_verification_results verification
+        JOIN greenfin_standardized_records record ON record.id = verification.record_id
+        WHERE record.document_id = ? ORDER BY verification.created_at DESC LIMIT 1`).bind(documentId).first<Record<string, unknown>>(),
+      db.prepare("SELECT * FROM greenfin_anomalies WHERE document_id = ? ORDER BY is_resolved, created_at DESC").bind(documentId).all(),
+    ]);
+    return Response.json({ document, fields: fields.results ?? [], record, verification, anomalies: anomalies.results ?? [] });
   } catch (error) {
     return errorResponse(error, "讀取 GreenFin 文件失敗");
   }

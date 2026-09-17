@@ -214,6 +214,7 @@ type LocalProject = {
   greenFinExperience?: number;
   greenFinLevel?: string;
   greenFinLevelLabel?: string;
+  greenFinPublicLevel?: "LV1" | "LV2" | "LV3" | "LV4";
 };
 
 type ImprovementProjectDraft = {
@@ -249,6 +250,7 @@ type FarmerStory = {
   greenFinExperience: number;
   greenFinLevel: string;
   greenFinLevelLabel: string;
+  greenFinPublicLevel: "LV1" | "LV2" | "LV3" | "LV4";
 };
 
 type FarmerNews = {
@@ -269,6 +271,7 @@ type FarmerNews = {
   greenFinExperience: number;
   greenFinLevel: string;
   greenFinLevelLabel: string;
+  greenFinPublicLevel: "LV1" | "LV2" | "LV3" | "LV4";
 };
 
 type PublicContent = { stories: FarmerStory[]; news: FarmerNews[] };
@@ -277,6 +280,7 @@ type GreenFinProgressSummary = {
   experienceTotal: number;
   level: string;
   levelLabel: string;
+  publicLevel: "LV1" | "LV2" | "LV3" | "LV4";
   totalLimit: number;
   ruleVersion: string;
   progressPercent: number;
@@ -298,7 +302,7 @@ type BackendSnapshot = {
   productsForConsumer: LocalProject[];
   projects: LocalProject[];
   catalog: LocalProject[];
-  farmers: Array<{ id: string; name: string; area: string; district: string; greenFinExperience: number; greenFinLevel: string; greenFinLevelLabel: string }>;
+  farmers: Array<{ id: string; name: string; area: string; district: string; greenFinExperience: number; greenFinLevel: string; greenFinLevelLabel: string; greenFinPublicLevel: "LV1" | "LV2" | "LV3" | "LV4" }>;
   farmerStory: FarmerStory | null;
   farmerNews: FarmerNews[];
   consumerNews: FarmerNews[];
@@ -3528,12 +3532,15 @@ function LocalSupportDashboard({
     const projectCity = item.city ?? locationById[item.id]?.city ?? "其他縣市";
     const projectDistrict = item.district ?? locationById[item.id]?.district ?? "合作地區";
     const location = { city: projectCity, district: projectDistrict, distance: distanceFromLocation(projectCity, projectDistrict, item.distance ?? locationById[item.id]?.distance ?? 300) };
+    const itemName = item.title.startsWith(`${item.farmer}｜`) ? item.title.slice(item.farmer.length + 1) : item.title;
     return (
       <Project
         key={item.id}
         image={item.image}
-        title={item.title}
-        note={`GreenFin 綠色經驗 ${item.greenFinLevel ?? "L0"}・${item.greenFinLevelLabel ?? "尚未開始"}｜${location.city}｜${location.district}｜距離你約 ${location.distance} 公里｜推薦分數 ${recommendationScore(item)}｜${item.proof ? `驗證：${item.proof}｜` : ""}${done ? (item.kind === "support" ? `已支持 ${item.points} 點，可查看影響力收據` : "兌換完成，可查看訂單進度") : supportUnavailable ? `${supportStatusLabel}｜${item.note}` : item.note}`}
+        title={itemName}
+        farmerName={item.farmer}
+        publicLevel={item.greenFinPublicLevel ?? "LV1"}
+        note={`${location.city}｜${location.district}｜距離你約 ${location.distance} 公里｜推薦分數 ${recommendationScore(item)}｜${item.proof ? `驗證：${item.proof}｜` : ""}${done ? (item.kind === "support" ? `已支持 ${item.points} 點，可查看影響力收據` : "兌換完成，可查看訂單進度") : supportUnavailable ? `${supportStatusLabel}｜${item.note}` : item.note}`}
         progress={item.progress}
         button={done ? (item.kind === "support" ? "查看成果" : "查看狀態") : supportUnavailable ? supportStatusLabel : item.kind === "support" ? `支持 ${item.points} 點` : `兌換 ${item.points} 點`}
         onClick={() => onProject(item.id)}
@@ -4215,7 +4222,15 @@ function OrderChangeRequestModal({ order, onClose, onSubmit }: { order: BackendS
     <label>收件人<input value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} /></label><label>聯絡電話<input value={form.recipientPhone} onChange={(event) => setForm((current) => ({ ...current, recipientPhone: event.target.value }))} /></label><label>郵遞區號<input value={form.postalCode} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} /></label><label>縣市<input value={form.shippingCity} onChange={(event) => setForm((current) => ({ ...current, shippingCity: event.target.value }))} /></label><label>行政區<input value={form.shippingDistrict} onChange={(event) => setForm((current) => ({ ...current, shippingDistrict: event.target.value }))} /></label><label className="full">詳細地址<input value={form.shippingAddress} onChange={(event) => setForm((current) => ({ ...current, shippingAddress: event.target.value }))} /></label><label className="full">配送備註<textarea rows={2} value={form.deliveryNote} onChange={(event) => setForm((current) => ({ ...current, deliveryNote: event.target.value }))} /></label><label className="full">申請說明<textarea rows={3} value={form.reasonDetail} onChange={(event) => setForm((current) => ({ ...current, reasonDetail: event.target.value }))} maxLength={500} /></label>
   </div><div className="modal-actions"><button className="button button-secondary" onClick={onClose} disabled={busy}>取消</button><button className="button button-primary" disabled={busy || !complete} onClick={() => { setBusy(true); void onSubmit({ orderId: order.id, ...form }).finally(() => setBusy(false)); }}>{busy ? "正在送出…" : "送出訂單修改申請"}</button></div></ModalShell>;
 }
-type GreenFinDocumentRow = { id: string; original_name: string; domain: string; source_level: string; status: string; created_at: string };
+type GreenFinDocumentRow = { id: string; original_name: string; domain: string; source_level: string; status: string; upload_note?: string; created_at: string };
+type GreenFinDocumentFieldRow = { id: string; field_name: string; raw_value: string | null; normalized_value: string | null; confidence: number | null; manually_corrected: number };
+type GreenFinDocumentDetail = {
+  document: GreenFinDocumentRow;
+  fields: GreenFinDocumentFieldRow[];
+  record: Record<string, unknown> | null;
+  verification: Record<string, unknown> | null;
+  anomalies: Array<Record<string, unknown>>;
+};
 type GreenFinActionRow = { id: string; dimension: string; action_level: string; description: string; action_date: string; is_active: number };
 type GreenFinResultSummary = Omit<GreenFinProgressSummary, "experienceTotal"> & {
   total: number;
@@ -4233,6 +4248,13 @@ const greenFinDomains = [
   ["IDENTITY", "身分與資格"], ["LAND_CROP", "土地與作物"], ["TRANSACTION", "經營與交易"],
   ["INPUT_EQUIPMENT", "投入與設備"], ["GREEN_ACTION", "綠色行動"], ["CERTIFICATION", "認證與治理"], ["LOAN_PURPOSE", "申貸用途"],
 ] as const;
+const greenFinDocumentStatusLabels: Record<string, string> = {
+  UPLOADED: "已上傳",
+  OCR_COMPLETED: "待補件／確認欄位",
+  FIELDS_CONFIRMED: "欄位已確認",
+  NORMALIZED: "待來源核驗",
+  VERIFIED: "已完成核驗",
+};
 
 function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToast }: {
   busy: boolean; csrfToken: string; role: LoginRole;
@@ -4252,6 +4274,9 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
   const [actionDraft, setActionDraft] = useState({ dimension: "減量", actionLevel: "BASIC", description: "", actionDate: new Date().toISOString().slice(0, 10) });
   const [authorizationDraft, setAuthorizationDraft] = useState(() => ({ institutionId: "", purpose: "申請授信時提供 GreenFin 永續資料作為補充資訊", dataScope: ["EXPERIENCE", "INDICATORS", "DATA_HEALTH"], startAt: new Date().toISOString().slice(0, 10), expireAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) }));
   const [working, setWorking] = useState(false);
+  const [documentDetail, setDocumentDetail] = useState<GreenFinDocumentDetail | null>(null);
+  const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
+  const [detailLoading, setDetailLoading] = useState(false);
   const [currentTime] = useState(() => Date.now());
 
   const headers = { "x-gfes-role": role };
@@ -4280,8 +4305,50 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "GreenFin 操作失敗");
       onToast(success); await Promise.all([loadGreenFin(), onChanged()]);
-    } catch (error) { onToast(error instanceof Error ? error.message : "GreenFin 操作失敗"); }
+      return true;
+    } catch (error) { onToast(error instanceof Error ? error.message : "GreenFin 操作失敗"); return false; }
     finally { setWorking(false); }
+  }
+
+  async function openDocument(documentId: string) {
+    setDetailLoading(true);
+    try {
+      const response = await fetch(`/api/greenfin/documents?documentId=${encodeURIComponent(documentId)}`, { headers, cache: "no-store" });
+      const payload = await response.json() as GreenFinDocumentDetail & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "讀取 GreenFin 文件失敗");
+      setDocumentDetail(payload);
+      setFieldDraft(Object.fromEntries(payload.fields.map((field) => [field.id, field.raw_value ?? ""])));
+      setSection("documents");
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "讀取 GreenFin 文件失敗");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function processDocument(url: string, method: "PUT" | "PATCH" | "POST", payload: Record<string, unknown>, success: string, documentId: string) {
+    const completed = await mutate(url, method, payload, success);
+    if (completed) await openDocument(documentId);
+  }
+
+  async function loadDemoVerificationData() {
+    if (!window.confirm("載入 DEMO／SIMULATED GreenFin 假資料？\n\n將建立一份待補件文件、一份已核驗文件與一筆示範綠色行動，僅供流程測試。")) return;
+    setWorking(true);
+    try {
+      const demoResponse = await fetch("/api/greenfin/demo", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: "{}" });
+      const demo = await demoResponse.json() as { error?: string; pendingDocumentId?: string };
+      if (!demoResponse.ok || !demo.pendingDocumentId) throw new Error(demo.error || "建立 DEMO 核驗資料失敗");
+      const calculationResponse = await fetch("/api/greenfin/results", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: "{}" });
+      const calculation = await calculationResponse.json() as { error?: string };
+      if (!calculationResponse.ok) throw new Error(calculation.error || "DEMO 資料計算失敗");
+      await Promise.all([loadGreenFin(), onChanged()]);
+      await openDocument(demo.pendingDocumentId);
+      onToast("DEMO／SIMULATED 假資料已建立，待補件畫面已開啟");
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "建立 DEMO 核驗資料失敗");
+    } finally {
+      setWorking(false);
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -4290,21 +4357,59 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
     if (uploaded) { setFile(null); setNote(""); await Promise.all([loadGreenFin(), onChanged()]); }
   }
 
-  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => [...new Map(rows.map((row) => [String(row[key]), row])).values()];
+  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => {
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+      const value = String(row[key]);
+      if (seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+  };
   const indicators = latestBy(results.indicators, "indicator_type");
   const health = latestBy(results.dataHealth, "domain");
   const summary = results.summary;
   const experienceTotal = summary?.total ?? 0;
+  const pendingDocuments = documents.filter((document) => document.status !== "VERIFIED");
+  function openPendingDocuments() {
+    setSection("documents");
+    if (pendingDocuments[0]) void openDocument(pendingDocuments[0].id);
+  }
+  function stageAction(stageId: string) {
+    if (stageId === "documents") return { label: "上傳文件", action: () => { setDocumentDetail(null); setSection("documents"); } };
+    if (stageId === "processing" || stageId === "verification") return { label: pendingDocuments.length ? `查看待補件 ${pendingDocuments.length}` : "查看文件", action: openPendingDocuments };
+    if (stageId === "actions") return { label: "新增行動", action: () => setSection("actions") };
+    return { label: "查看結果", action: () => setSection("experience") };
+  }
   return <div className="dashboard-grid">
     <Panel className="span-12 subpage-primary" title="GreenFin 綠色數位履歷" note="Evidence First・Rule Driven・Explainable；不等同信用評分或自動核貸">
       <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health", "authorizations"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health", authorizations: "銀行授權" }[item]}</button>)}</div>
     </Panel>
-    {section === "dashboard" && <section className="greenfin-workspace-summary span-12"><div className="greenfin-level-card"><span>GreenFin 綠色經驗等級</span><strong>{summary?.level ?? "L0"}</strong><b>{summary?.levelLabel ?? "尚未開始"}</b><small>{experienceTotal.toLocaleString()}／{summary?.totalLimit ?? 1000} 經驗值</small></div><div className="greenfin-progress-card"><div><span>數位履歷建置進度</span><strong>{summary?.progressPercent ?? 0}%</strong></div><div className="progress"><span style={{ width: `${summary?.progressPercent ?? 0}%` }} /></div><p>{summary?.nextAction ?? "上傳第一份原始文件"}</p><small>{summary?.completedStageCount ?? 0}／{summary?.totalStageCount ?? 5} 階段完成</small></div><div className="greenfin-stage-list">{(summary?.stages ?? []).map((stage) => <Evidence key={stage.id} title={stage.label} note={stage.detail} done={stage.complete} />)}</div></section>}
+    {section === "dashboard" && <section className="greenfin-workspace-summary span-12">
+      <div className="greenfin-level-card"><span>GreenFin 綠色經驗等級</span><strong>{summary?.level ?? "L0"}</strong><b>{summary?.levelLabel ?? "尚未開始"}</b><small>{experienceTotal.toLocaleString()}／{summary?.totalLimit ?? 1000} 經驗值</small></div>
+      <div className="greenfin-progress-card"><div><span>數位履歷建置進度</span><strong>{summary?.progressPercent ?? 0}%</strong></div><div className="progress"><span style={{ width: `${summary?.progressPercent ?? 0}%` }} /></div><p>{summary?.nextAction ?? "上傳第一份原始文件"}</p><small>{summary?.completedStageCount ?? 0}／{summary?.totalStageCount ?? 5} 階段完成</small><div className="greenfin-progress-actions"><button className="button button-primary" onClick={() => { setDocumentDetail(null); setSection("documents"); }}><Upload />上傳文件</button><button className="button button-secondary" onClick={openPendingDocuments}><FileCheck2 />待補件 {pendingDocuments.length}</button></div></div>
+      <div className="greenfin-stage-list">{(summary?.stages ?? []).map((stage) => { const next = stageAction(stage.id); return <Evidence key={stage.id} title={stage.label} note={stage.detail} done={stage.complete} actionLabel={next.label} onAction={next.action} />; })}</div>
+    </section>}
     {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><strong className="greenfin-inline-level">{summary?.level ?? "L0"}・{summary?.levelLabel ?? "尚未開始"}</strong><small>規則版本：{summary?.ruleVersion ?? "GREENFIN_DEMO_V1"}</small>{summary?.nextLevel && <p className="greenfin-next-level">距離 {summary.nextLevel} 尚差 {summary.pointsToNextLevel} 經驗值</p>}</Panel>}
     {section === "experience" && <Panel className="span-8" title="四構面累積" note="各構面獨立累積，不合成信用分數"><div className="greenfin-dimension-grid">{Object.entries(summary?.dimensions ?? { 減量: 0, 增匯: 0, 循環: 0, 綠色治理: 0 }).map(([dimension, value]) => <article key={dimension}><div><span>{dimension}</span><strong>{value.toLocaleString()}／{summary?.annualLimitPerDimension ?? 250}</strong></div><div className="progress"><span style={{ width: `${Math.min(100, value / (summary?.annualLimitPerDimension ?? 250) * 100)}%` }} /></div></article>)}</div><p className="fine-print">有效經驗值＝行為基礎值 × 來源認列比例；由後端依規則版本計算。</p></Panel>}
     {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
     {(section === "dashboard" || section === "health") && <Panel className="span-4" title="Data Health" note="GRAY／RED／YELLOW／GREEN"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={String(item.status)} done={item.status === "GREEN"} />) : <p className="empty-copy">尚未計算資料健康度。</p>}</div></Panel>}
-    {section === "documents" && <><Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式"><form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、圖片或 XLSX"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept="application/pdf,image/*,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 SIMULATED OCR</button></form></Panel><Panel className="span-7" title="文件處理佇列" note={`${documents.length} 份 GreenFin 文件`}>{documents.length ? <div className="evidence-list">{documents.map((document) => <article className="evidence-item" key={document.id}><div><strong>{document.original_name}</strong><small>{document.domain}・{document.source_level}・{document.status}</small></div><div className="inline-actions">{document.status === "OCR_COMPLETED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PUT", { documentId: document.id, corrections: {} }, "OCR 欄位已確認")}>確認欄位</button>}{document.status === "FIELDS_CONFIRMED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/documents", "PATCH", { documentId: document.id }, "文件已正規化")}>正規化</button>}{document.status === "NORMALIZED" && <button className="text-button" onClick={() => void mutate("/api/greenfin/verification", "POST", { documentId: document.id }, "來源核驗與異常檢查完成")}>核驗</button>}</div></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件。</p>}</Panel></>}
+    {section === "documents" && <>
+      <Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式">
+        <form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、圖片或 XLSX"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept="application/pdf,image/*,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 SIMULATED OCR</button></form>
+        <div className="greenfin-demo-loader"><BadgeCheck /><div><b>需要可操作的驗證假資料？</b><small>建立一份待補件與一份已核驗文件，所有內容都標示 DEMO／SIMULATED。</small></div><button type="button" className="button button-secondary" disabled={working} onClick={() => void loadDemoVerificationData()}>{working ? "建立中…" : "載入 DEMO 核驗資料"}</button></div>
+      </Panel>
+      <Panel className="span-7" title="文件處理佇列" note={`${documents.length} 份文件・${pendingDocuments.length} 份待處理`}>
+        {documents.length ? <div className="evidence-list">{documents.map((document) => <article className={`evidence-item greenfin-document-row ${documentDetail?.document.id === document.id ? "selected" : ""}`} key={document.id}><div><strong>{document.original_name}</strong><small>{greenFinDomains.find(([key]) => key === document.domain)?.[1] ?? document.domain}・{document.source_level}</small><span className={`status-pill ${document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[document.status] ?? document.status}</span></div><button className="button button-secondary" disabled={detailLoading} onClick={() => void openDocument(document.id)}>{document.status === "VERIFIED" ? "查看核驗結果" : "查看與補件"}</button></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件，可從左側上傳或載入 DEMO 核驗資料。</p>}
+      </Panel>
+      {documentDetail && <Panel className="span-12 greenfin-document-workspace" title="文件補件與核驗" note="逐欄確認後依序完成標準化與來源核驗；所有 DEMO 資料均不得作為真實授信依據">
+        <div className="greenfin-document-head"><div><span className="eyebrow">{documentDetail.document.original_name.includes("DEMO") ? "DEMO／SIMULATED" : "GREENFIN DOCUMENT"}</span><h3>{documentDetail.document.original_name}</h3><p>{documentDetail.document.upload_note || "未填寫文件說明"}</p></div><span className={`status-pill ${documentDetail.document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[documentDetail.document.status] ?? documentDetail.document.status}</span></div>
+        <div className="greenfin-field-grid">{documentDetail.fields.map((field) => { const editable = documentDetail.document.status === "OCR_COMPLETED" || documentDetail.document.status === "FIELDS_CONFIRMED"; const lowConfidence = field.confidence != null && field.confidence < .5; return <label className={lowConfidence ? "needs-review" : ""} key={field.id}><span>{field.field_name}<em>{field.confidence == null ? "人工輸入" : `OCR ${Math.round(field.confidence * 100)}%`}</em></span><input value={fieldDraft[field.id] ?? ""} readOnly={!editable} placeholder={lowConfidence ? "此欄位需要補件確認" : "請確認欄位內容"} onChange={(event) => setFieldDraft((current) => ({ ...current, [field.id]: event.target.value }))} />{field.normalized_value && <small>標準化：{field.normalized_value}</small>}</label>; })}</div>
+        {documentDetail.verification && <div className="greenfin-verification-result"><BadgeCheck /><div><b>來源核驗結果：{String(documentDetail.verification.source_level)}</b><p>{String(documentDetail.verification.reason)}</p></div></div>}
+        {documentDetail.anomalies.length > 0 && <div className="greenfin-anomaly-list">{documentDetail.anomalies.map((anomaly) => <article key={String(anomaly.id)}><b>{String(anomaly.anomaly_type)}・{String(anomaly.severity)}</b><span>{String(anomaly.description)}</span></article>)}</div>}
+        <div className="greenfin-document-actions"><button className="button button-secondary" onClick={() => setDocumentDetail(null)}>關閉詳情</button>{documentDetail.document.status === "OCR_COMPLETED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/documents", "PUT", { documentId: documentDetail.document.id, corrections: fieldDraft }, "補件欄位已確認", documentDetail.document.id)}>確認欄位並送出補件</button>}{documentDetail.document.status === "FIELDS_CONFIRMED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/documents", "PATCH", { documentId: documentDetail.document.id }, "文件已完成標準化", documentDetail.document.id)}>執行標準化</button>}{documentDetail.document.status === "NORMALIZED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/verification", "POST", { documentId: documentDetail.document.id }, "來源核驗與異常檢查完成", documentDetail.document.id)}>執行來源核驗</button>}{documentDetail.document.status === "VERIFIED" && <span className="greenfin-complete-label"><CheckCircle2 />已完成核驗</span>}</div>
+      </Panel>}
+    </>}
     {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；實際認列仍依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "" }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim()}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}`} done={Boolean(item.is_active)} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
     {section === "authorizations" && <><Panel className="span-5" title="建立機構授權" note="授權可隨時撤銷；單次期間最長 366 天"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/authorizations", "POST", authorizationDraft, "GreenFin 機構授權已建立"); }}><label>授權機構<select required value={authorizationDraft.institutionId} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, institutionId: event.target.value }))}><option value="">請選擇機構</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label><label>授權目的<textarea required maxLength={500} value={authorizationDraft.purpose} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, purpose: event.target.value }))} /></label><div className="form-grid"><label>開始日期<input type="date" value={authorizationDraft.startAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, startAt: event.target.value }))} /></label><label>到期日期<input type="date" min={authorizationDraft.startAt} value={authorizationDraft.expireAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, expireAt: event.target.value }))} /></label></div><fieldset><legend>資料範圍</legend>{[["EXPERIENCE", "綠色經驗值"], ["INDICATORS", "四大指標"], ["DATA_HEALTH", "Data Health"]].map(([value, label]) => <label key={value}><input type="checkbox" checked={authorizationDraft.dataScope.includes(value)} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, dataScope: event.target.checked ? [...current.dataScope, value] : current.dataScope.filter((scope) => scope !== value) }))} />{label}</label>)}</fieldset><button className="button button-primary button-block" disabled={working || !authorizationDraft.institutionId || !authorizationDraft.dataScope.length}>建立限期授權</button></form></Panel><Panel className="span-7" title="授權紀錄" note="機構、資料範圍、期間與撤銷狀態均由後端檢核"><div className="evidence-list">{authorizations.length ? authorizations.map((item) => { const scopes = JSON.parse(item.data_scope_json) as string[]; const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.expire_at).valueOf() > currentTime; return <article className="evidence-item" key={item.id}><div><strong>{item.institution_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・{item.start_at.slice(0, 10)} 至 {item.expire_at.slice(0, 10)}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效" : item.status === "REVOKED" ? "已撤銷" : "已到期"}</span>{active && <button type="button" className="text-button" onClick={() => { if (window.confirm(`確認撤銷對 ${item.institution_name} 的 GreenFin 授權？`)) void mutate(`/api/greenfin/authorizations?authorizationId=${encodeURIComponent(item.id)}`, "DELETE", {}, "GreenFin 授權已撤銷"); }}>撤銷</button>}</div></article>; }) : <p className="empty-copy">尚未建立任何機構授權。</p>}</div></Panel></>}
     {section !== "documents" && section !== "actions" && section !== "authorizations" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
@@ -4680,6 +4785,8 @@ function ActionModal({
 function Project({
   image,
   title,
+  farmerName,
+  publicLevel,
   note,
   progress,
   button,
@@ -4689,6 +4796,8 @@ function Project({
 }: {
   image: string;
   title: string;
+  farmerName?: string;
+  publicLevel?: "LV1" | "LV2" | "LV3" | "LV4";
   note: string;
   progress: number;
   button: string;
@@ -4699,7 +4808,7 @@ function Project({
   return (
     <article className="project">
       <img src={image} alt={title} />
-      <div><h3>{title}</h3><p>{note}</p><div className="progress"><span style={{ width: `${progress}%` }} /></div></div>
+      <div><h3 className="project-title">{farmerName && publicLevel ? <><span className="project-farmer-name"><span>{farmerName}</span><GreenFinLevelBadge level={publicLevel} /></span><b>{title}</b></> : title}</h3><p>{note}</p><div className="progress"><span style={{ width: `${progress}%` }} /></div></div>
       <div className="project-actions">
         <button className="button button-secondary" onClick={onLearnMore}>了解更多</button>
         <button className={`button ${gold ? "button-gold" : "button-primary"}`} onClick={onClick}>{button}</button>
@@ -4708,15 +4817,19 @@ function Project({
   );
 }
 
+function GreenFinLevelBadge({ level }: { level: "LV1" | "LV2" | "LV3" | "LV4" }) {
+  return <span className={`greenfin-level-badge greenfin-level-${level.toLowerCase()}`} title={`GreenFin 綠色經驗公開徽章 ${level}`}><Leaf />{level}</span>;
+}
+
 function Activity({ icon: Icon, title, note, value }: { icon: typeof Store; title: string; note: string; value: string }) {
   return (
     <div className="activity"><span><Icon /></span><div><b>{title}</b><small>{note}</small></div><time>{value}</time></div>
   );
 }
 
-function Evidence({ title, note, done }: { title: string; note: string; done: boolean }) {
+function Evidence({ title, note, done, actionLabel, onAction }: { title: string; note: string; done: boolean; actionLabel?: string; onAction?: () => void }) {
   return (
-    <div className="evidence"><span className={done ? "done" : ""} /><div><b>{title}</b><small>{note}</small></div><em>{done ? "已完成" : "待補件"}</em></div>
+    <div className="evidence"><span className={done ? "done" : ""} /><div><b>{title}</b><small>{note}</small></div><div className="evidence-state"><em>{done ? "已完成" : "待補件"}</em>{actionLabel && onAction && <button type="button" onClick={onAction}>{actionLabel}</button>}</div></div>
   );
 }
 

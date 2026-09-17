@@ -34,3 +34,12 @@ GFES profiles、accounts 與 sessions 是唯一身分來源；既有 `evidence` 
 **Date:** 2026-09-17
 
 對消費者公開的小農 GreenFin 等級只由目前規則版本的綠色經驗值後端換算，並與四大分析指標及 Data Health 保持獨立。公開畫面同時聲明該等級代表可追溯綠色行動經驗，不是信用評分、核貸判斷或額度／利率建議。
+
+公開卡片使用易讀的四階徽章，對應規則為 `L0／L1 → LV1`、`L2 → LV2`、`L3 → LV3`、`L4／L5 → LV4`。此映射由後端提供，僅縮短消費者端視覺標示；小農工作台仍保留完整 L0–L5 等級與經驗值明細。
+
+## ADR-M006 — Demo verification fixtures are explicit and idempotent
+
+**Status:** Accepted
+**Date:** 2026-09-17
+
+GreenFin 工作台可由已登入小農建立一組固定識別碼的 `DEMO／SIMULATED` 流程資料，包含一份待補件文件、一份已核驗文件與一筆示範綠色行動。此功能需通過 CSRF 與小農角色檢查、以 `INSERT OR IGNORE` 保持重複執行安全，並寫入必要稽核事件；不得將其標示或解讀為真實第三方驗證。

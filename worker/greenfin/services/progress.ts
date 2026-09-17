@@ -1,6 +1,7 @@
 import type { GreenFinRuleEngine } from "../rules/engine";
 
 export type GreenFinExperienceLevel = "L0" | "L1" | "L2" | "L3" | "L4" | "L5";
+export type GreenFinPublicLevel = "LV1" | "LV2" | "LV3" | "LV4";
 
 export const GREENFIN_LEVEL_LABELS: Record<GreenFinExperienceLevel, string> = {
   L0: "尚未開始",
@@ -36,6 +37,13 @@ export function greenFinExperienceLevel(engine: GreenFinRuleEngine, total: numbe
   return (match ?? "L0") as GreenFinExperienceLevel;
 }
 
+export function greenFinPublicLevel(level: GreenFinExperienceLevel): GreenFinPublicLevel {
+  if (level === "L2") return "LV2";
+  if (level === "L3") return "LV3";
+  if (level === "L4" || level === "L5") return "LV4";
+  return "LV1";
+}
+
 export function summarizeGreenFinExperience(
   engine: GreenFinRuleEngine,
   transactions: Array<{ dimension: string; effectiveValue: number }>,
@@ -52,6 +60,7 @@ export function summarizeGreenFinExperience(
   return {
     total,
     level,
+    publicLevel: greenFinPublicLevel(level),
     levelLabel: GREENFIN_LEVEL_LABELS[level],
     dimensions,
     annualLimitPerDimension: engine.experience.annualLimitPerDimension,
@@ -73,14 +82,18 @@ export function buildGreenFinProgress(input: GreenFinProgressInput) {
     {
       id: "processing",
       label: "OCR 與標準化",
-      detail: input.processedDocumentCount ? `${input.processedDocumentCount} 份完成欄位確認與標準化` : "確認 OCR 欄位並完成標準化",
-      complete: input.processedDocumentCount > 0,
+      detail: input.documentCount
+        ? `${input.processedDocumentCount}／${input.documentCount} 份完成欄位確認與標準化`
+        : "確認 OCR 欄位並完成標準化",
+      complete: input.documentCount > 0 && input.processedDocumentCount >= input.documentCount,
     },
     {
       id: "verification",
       label: "來源核驗",
-      detail: input.verifiedDocumentCount ? `${input.verifiedDocumentCount} 份完成來源核驗` : "完成來源強度與異常檢查",
-      complete: input.verifiedDocumentCount > 0,
+      detail: input.documentCount
+        ? `${input.verifiedDocumentCount}／${input.documentCount} 份完成來源核驗`
+        : "完成來源強度與異常檢查",
+      complete: input.documentCount > 0 && input.verifiedDocumentCount >= input.documentCount,
     },
     {
       id: "actions",
@@ -94,7 +107,12 @@ export function buildGreenFinProgress(input: GreenFinProgressInput) {
       detail: input.unresolvedAnomalyCount
         ? `尚有 ${input.unresolvedAnomalyCount} 筆異常待覆核`
         : "產出經驗值、四大指標與 Data Health",
-      complete: input.experienceTransactionCount > 0 && input.indicatorCount >= 4 && input.dataHealthCount >= 7,
+      complete: input.documentCount > 0
+        && input.verifiedDocumentCount >= input.documentCount
+        && input.experienceTransactionCount > 0
+        && input.indicatorCount >= 4
+        && input.dataHealthCount >= 7
+        && input.unresolvedAnomalyCount === 0,
     },
   ];
   const completedStageCount = stages.filter((stage) => stage.complete).length;

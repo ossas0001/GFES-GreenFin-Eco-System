@@ -2,7 +2,7 @@ import { getDb } from "./index";
 import { createPasswordCredential } from "./credentials";
 import { ensureGreenFinSchema } from "./greenfin";
 import { loadGreenFinRuleEngine } from "../worker/greenfin/rules/engine";
-import { buildGreenFinProgress, GREENFIN_LEVEL_LABELS, greenFinExperienceLevel } from "../worker/greenfin/services/progress";
+import { buildGreenFinProgress, GREENFIN_LEVEL_LABELS, greenFinExperienceLevel, greenFinPublicLevel } from "../worker/greenfin/services/progress";
 
 export const CONSUMER_ID = "consumer-001";
 export const FARMER_ID = "farmer-001";
@@ -1131,7 +1131,7 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       const input = body.input ?? {};
       const fingerprint = await sha256(`${serviceKey}:${stableJson(input)}`);
       const existingRun = await queryOne<{ id: string; response_json: string }>(db, "SELECT id, response_json FROM verification_runs WHERE service_key = ? AND input_fingerprint = ?", serviceKey, fingerprint);
-      if (existingRun) return { ok: true, duplicate: true, runId: existingRun.id, response: parse(existingRun.response_json, {}) };
+      if (existingRun) throw new Error("此驗證資料已處理，不會重複發放綠點");
       const runId = `VERIFY-${crypto.randomUUID()}`;
       const responsePayload = { ...parse<Record<string, unknown>>(setting.sample_response_json, {}), simulation: true, verifiedAt: new Date().toISOString() };
       const statements = [
@@ -1509,7 +1509,7 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
   const greenFinForFarmer = (id: unknown) => {
     const experienceTotal = greenFinExperienceByFarmer.get(String(id)) ?? 0;
     const level = greenFinExperienceLevel(greenFinRuleEngine, experienceTotal);
-    return { greenFinExperience: experienceTotal, greenFinLevel: level, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[level] };
+    return { greenFinExperience: experienceTotal, greenFinLevel: level, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[level], greenFinPublicLevel: greenFinPublicLevel(level) };
   };
   const greenFinProgressStats = viewer?.role === "farmer"
     ? await queryOne<Record<string, number>>(db, `SELECT
@@ -1679,6 +1679,7 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
       experienceTotal: currentFarmerGreenFin.greenFinExperience,
       level: currentFarmerGreenFin.greenFinLevel,
       levelLabel: currentFarmerGreenFin.greenFinLevelLabel,
+      publicLevel: currentFarmerGreenFin.greenFinPublicLevel,
       totalLimit: greenFinRuleEngine.experience.totalLimit,
       ruleVersion: greenFinRuleEngine.version,
       ...greenFinProgress,
@@ -1747,7 +1748,7 @@ export async function getPublicPlatformContent(db: DbBinding) {
   const publicGreenFin = (farmerId: unknown) => {
     const greenFinExperience = experienceByFarmer.get(String(farmerId)) ?? 0;
     const greenFinLevel = greenFinExperienceLevel(greenFinRuleEngine, greenFinExperience);
-    return { greenFinExperience, greenFinLevel, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[greenFinLevel] };
+    return { greenFinExperience, greenFinLevel, greenFinLevelLabel: GREENFIN_LEVEL_LABELS[greenFinLevel], greenFinPublicLevel: greenFinPublicLevel(greenFinLevel) };
   };
   return {
     stories: storyRows.map((row) => ({

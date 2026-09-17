@@ -1,0 +1,35 @@
+MERGE-12 — LV badges and actionable document completion／verification workflow
+Date: 2026-09-17
+
+npx tsc --noEmit
+PASS
+
+npm run lint
+PASS — 0 errors, 26 pre-existing non-blocking warnings
+
+npm test
+PASS — 47 tests passed, 0 failed; production build completed
+
+npm run test:security:local
+PASS — authentication, role isolation, CSRF, ownership, concurrent double-spend, deterministic duplicate-reward rejection, upload validation and session revocation checks
+
+npx wrangler deploy --dry-run
+PASS — isolated D1 and R2 bindings detected; original callback URL retained
+
+Local browser functional verification
+PASS — created explicitly marked DEMO／SIMULATED pending and verified files
+PASS — edited the pending OCR date, confirmed fields, standardized the record and completed source verification
+PASS — retained OCR_LOW_CONFIDENCE anomaly and displayed 80% progress until review
+PASS — LV badge visually appears immediately after the farmer name on consumer project and product cards
+
+Production browser functional verification
+PASS — production Demo farmer has 1 pending and 1 verified document with corresponding controls
+PASS — dashboard reports 40% and 1／2 processed while the pending document remains
+PASS — latest indicators and Data Health appear instead of stale historical results
+PASS — consumer product cards display the LV badge immediately after each farmer name
+
+Production deployment
+PASS — backend Worker version b0ac9f2c-403e-480e-b5f2-ee4c125a304f
+
+Canonical URL
+https://gfes-green-consumption.pages.dev

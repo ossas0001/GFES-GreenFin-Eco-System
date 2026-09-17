@@ -24,20 +24,27 @@ test("keeps GreenFin progress and public farmer levels backend-derived", () => {
   assert.match(resultsRoute, /summarizeGreenFinExperience/);
   assert.match(resultsRoute, /buildGreenFinProgress/);
   assert.match(platformBackend, /greenFinExperienceLevel/);
+  assert.match(platformBackend, /greenFinPublicLevel/);
   assert.match(platformBackend, /greenFinExperienceByFarmer/);
   assert.match(ui, /GreenFin 建置進度/);
   assert.match(ui, /GreenFin 綠色經驗等級/);
-  assert.match(ui, /GreenFin 綠色經驗 \{item\.greenFinLevel/);
+  assert.match(ui, /GreenFinLevelBadge/);
+  assert.match(ui, /item\.greenFinPublicLevel/);
   assert.doesNotMatch(ui, /results\.experience\.reduce/);
 });
 
 test("wires the complete farmer document lifecycle", () => {
   assert.match(ui, /\/api\/greenfin\/documents/);
   assert.match(ui, /確認欄位/);
-  assert.match(ui, /正規化/);
+  assert.match(ui, /標準化/);
   assert.match(ui, /\/api\/greenfin\/verification/);
   assert.match(ui, /\/api\/greenfin\/results/);
   assert.match(ui, /SIMULATED OCR/);
+  assert.match(ui, /查看與補件/);
+  assert.match(ui, /確認欄位並送出補件/);
+  assert.match(ui, /載入 DEMO 核驗資料/);
+  assert.match(ui, /\/api\/greenfin\/demo/);
+  assert.match(ui, /const seen = new Set<string>/);
 });
 
 test("green actions enforce farmer ownership and accepted dimensions", () => {

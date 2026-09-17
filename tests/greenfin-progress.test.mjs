@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { defaultGreenFinRuleEngine } from "../worker/greenfin/rules/engine.ts";
-import { buildGreenFinProgress, greenFinExperienceLevel, summarizeGreenFinExperience } from "../worker/greenfin/services/progress.ts";
+import { buildGreenFinProgress, greenFinExperienceLevel, greenFinPublicLevel, summarizeGreenFinExperience } from "../worker/greenfin/services/progress.ts";
 
 const engine = defaultGreenFinRuleEngine();
 
@@ -15,6 +15,15 @@ test("maps GreenFin experience totals to the rule-defined L0-L5 levels", () => {
   assert.equal(greenFinExperienceLevel(engine, 801), "L5");
 });
 
+test("maps the canonical L0-L5 result to a four-tier public badge", () => {
+  assert.equal(greenFinPublicLevel("L0"), "LV1");
+  assert.equal(greenFinPublicLevel("L1"), "LV1");
+  assert.equal(greenFinPublicLevel("L2"), "LV2");
+  assert.equal(greenFinPublicLevel("L3"), "LV3");
+  assert.equal(greenFinPublicLevel("L4"), "LV4");
+  assert.equal(greenFinPublicLevel("L5"), "LV4");
+});
+
 test("summarizes GreenFin experience on the backend without combining analysis indicators", () => {
   const summary = summarizeGreenFinExperience(engine, [
     { dimension: "減量", effectiveValue: 100 },
@@ -22,6 +31,7 @@ test("summarizes GreenFin experience on the backend without combining analysis i
   ]);
   assert.equal(summary.total, 250);
   assert.equal(summary.level, "L2");
+  assert.equal(summary.publicLevel, "LV2");
   assert.equal(summary.dimensions["減量"], 100);
   assert.equal(summary.dimensions["循環"], 150);
   assert.equal(summary.ruleVersion, "GREENFIN_DEMO_V1");
@@ -39,7 +49,39 @@ test("tracks the five GreenFin workflow stages and identifies the next action", 
     dataHealthCount: 0,
     unresolvedAnomalyCount: 0,
   });
+  assert.equal(progress.progressPercent, 20);
+  assert.equal(progress.completedStageCount, 1);
+  assert.match(progress.nextAction, /1／2 份完成欄位確認/);
+});
+
+test("keeps the result stage pending while anomalies still require review", () => {
+  const progress = buildGreenFinProgress({
+    documentCount: 2,
+    processedDocumentCount: 2,
+    verifiedDocumentCount: 2,
+    actionCount: 1,
+    experienceTransactionCount: 1,
+    indicatorCount: 4,
+    dataHealthCount: 7,
+    unresolvedAnomalyCount: 1,
+  });
+  assert.equal(progress.progressPercent, 80);
+  assert.equal(progress.completedStageCount, 4);
+  assert.match(progress.nextAction, /異常待覆核/);
+});
+
+test("does not report complete progress while any uploaded document is pending", () => {
+  const progress = buildGreenFinProgress({
+    documentCount: 2,
+    processedDocumentCount: 1,
+    verifiedDocumentCount: 1,
+    actionCount: 1,
+    experienceTransactionCount: 1,
+    indicatorCount: 4,
+    dataHealthCount: 7,
+    unresolvedAnomalyCount: 0,
+  });
   assert.equal(progress.progressPercent, 40);
   assert.equal(progress.completedStageCount, 2);
-  assert.match(progress.nextAction, /來源強度與異常檢查/);
+  assert.match(progress.nextAction, /1／2 份完成欄位確認/);
 });
