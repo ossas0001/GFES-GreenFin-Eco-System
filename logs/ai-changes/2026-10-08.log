@@ -30,3 +30,12 @@ Gate: local patch and audit report ready for review. Live Cloudflare bindings, a
 - Clarified that the institution report download is a fixed sample PDF even when the account has no report records.
 - Reran build, TypeScript, 47 repository tests, OAuth local security checks, upload create/replace/isolation checks, targeted ESLint, and git diff validation. All required checks passed; targeted ESLint had 0 errors and 24 pre-existing warnings in the large UI component.
 - GitHub push is to a review branch to avoid changing the production-linked main branch. No Cloudflare deployment or remote D1/R2 write.
+
+2026-10-08 — MERGE-18 live feature reconciliation before Worker release
+
+- Compared the active 2026-09-23 Worker bundle with the GitHub review branch because production contained later changes without a source branch.
+- Restored the government GreenFin document review workflow, admin DEMO PDF library and its two complete sample PDFs, public role previews, strict PDF/PNG/JPG/HEIC upload policy, and new-consumer welcome reward semantics and notice.
+- Added an explicit farmer submission step for newly uploaded OCR drafts, keeping unsent drafts hidden from the government account; preserved legacy submitted, approved and rejected documents and their progress totals.
+- Ran the 47 repository tests, TypeScript check, local review/resubmission/download integration test, responsive browser checks at 320/393/768/1024/1440 CSS pixels and a Wrangler deployment dry run. Results are in logs/test-results/2026-10-08-live-reconciliation.md.
+
+Gate: local reconciliation complete; GitHub push and production deployment pending.

@@ -282,7 +282,8 @@ img { display: block; max-width: 100%; }
   .admin-mobile-nav button { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: rgb(255 255 255 / .62); border: 0; border-radius: 9px; background: transparent; font-size: 10px; font-weight: 900; }
   .admin-mobile-nav button.active { color: white; background: rgb(255 255 255 / .12); }
   .admin-mobile-nav svg { width: 18px; height: 18px; }
-  .admin-mobile-nav { grid-template-columns: repeat(7, 1fr); }
+  .admin-mobile-nav { display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .admin-mobile-nav button { flex: 0 0 59px; }
   .template-summary-head { display: grid; }
   .farmer-media-library > header { display: grid; }
   .farmer-media-summary { justify-content: flex-start; }
@@ -1329,10 +1330,69 @@ td svg { width: 17px; }
 .greenfin-verification-result { margin-top: 16px; padding: 14px; display: flex; gap: 11px; align-items: flex-start; color: #1d5d42; border-radius: 14px; background: #eaf5e7; }
 .greenfin-verification-result svg { width: 21px; flex: 0 0 auto; }
 .greenfin-verification-result p { margin: 4px 0 0; color: #4e6b5d; font-size: 12px; }
+.greenfin-verification-result.review-rejected { color: #844e25; background: #fff2df; }
+.greenfin-verification-result.review-rejected p { color: #765b42; }
+.greenfin-review-note { margin-top: 16px; display: grid; gap: 8px; color: var(--forest-900); font-weight: 800; }
+.greenfin-review-note textarea { width: 100%; padding: 12px; border: 1px solid #ccdacd; border-radius: 12px; background: white; font: inherit; resize: vertical; }
 .greenfin-anomaly-list { margin-top: 12px; display: grid; gap: 8px; }
 .greenfin-anomaly-list article { padding: 11px 13px; display: flex; justify-content: space-between; gap: 14px; color: #754c1f; border-radius: 12px; background: #fff4df; }
 .greenfin-anomaly-list span { color: #785f43; font-size: 12px; }
 .greenfin-document-actions { margin-top: 18px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.greenfin-demo-admin-section { display: grid; gap: 18px; }
+.greenfin-demo-admin-intro { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+.greenfin-demo-admin-intro h2 { margin: 10px 0 6px; color: var(--forest-950); }
+.greenfin-demo-admin-intro p { max-width: 65ch; color: var(--muted); }
+.greenfin-demo-admin-intro aside { min-width: 130px; display: grid; gap: 2px; color: var(--forest-900); text-align: right; }
+.greenfin-demo-admin-intro aside b { font-size: 34px; }
+.greenfin-demo-admin-intro aside small { color: var(--muted); }
+.greenfin-demo-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.greenfin-demo-pdf-card { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.greenfin-demo-pdf-card header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.greenfin-demo-pdf-card header small, .greenfin-demo-pdf-card p { color: var(--muted); }
+.greenfin-demo-pdf-card h2 { margin: 0; color: var(--forest-950); font-size: 20px; }
+.greenfin-demo-pdf-icon { width: 62px; height: 62px; display: grid; place-items: center; color: var(--leaf); border-radius: 16px; background: #edf5e9; }
+.greenfin-demo-pdf-icon svg { width: 25px; }
+.greenfin-demo-pdf-icon span { font-size: 11px; font-weight: 900; }
+.greenfin-demo-field-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.greenfin-demo-field-list span { padding: 6px 9px; display: inline-flex; align-items: center; gap: 4px; color: var(--forest-900); border-radius: 999px; background: #eff6eb; font-size: 12px; }
+.greenfin-demo-field-list svg { width: 14px; height: 14px; }
+.greenfin-demo-pdf-card footer { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+.greenfin-demo-boundary { display: flex; gap: 12px; align-items: flex-start; }
+.greenfin-demo-boundary > svg { width: 24px; flex: 0 0 auto; color: var(--leaf); }
+.greenfin-demo-boundary h3 { margin: 0 0 5px; }
+.greenfin-demo-boundary p { margin: 0; color: var(--muted); line-height: 1.6; }
+.role-experience-site { min-height: 100vh; background: linear-gradient(140deg, #f0f5ed, #fcfdf9); }
+.role-experience-topbar .nav { justify-content: space-between; }
+.role-experience-main { min-height: calc(100vh - 80px); display: grid; align-items: center; padding: 40px 0 72px; }
+.role-experience-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); align-items: center; gap: clamp(24px, 5vw, 80px); }
+.role-experience-copy, .role-experience-preview { min-width: 0; }
+.role-experience-copy .eyebrow { color: var(--leaf); font-weight: 900; }
+.role-experience-icon { width: 58px; height: 58px; margin: 18px 0; display: grid; place-items: center; color: var(--leaf); border-radius: 18px; background: #e4f0e0; }
+.role-experience-icon svg { width: 30px; height: 30px; }
+.role-experience-copy h1 { max-width: 16ch; margin: 0 0 18px; color: var(--forest-950); font-size: clamp(30px, 4vw, 54px); line-height: 1.2; }
+.role-experience-copy p { max-width: 58ch; color: var(--muted); line-height: 1.8; }
+.role-experience-copy > small { display: block; margin-top: 16px; color: var(--muted); }
+.role-experience-actions { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+.role-experience-preview { padding: 26px; border: 1px solid #dce9db; border-radius: 24px; background: white; box-shadow: 0 18px 50px rgb(21 65 43 / .08); }
+.role-experience-preview > header { display: flex; align-items: center; gap: 12px; }
+.role-experience-preview > header > span { width: 46px; height: 46px; display: grid; place-items: center; color: white; border-radius: 14px; background: var(--leaf); }
+.role-experience-preview h2 { margin: 2px 0 0; color: var(--forest-950); }
+.role-experience-preview small { color: var(--muted); }
+.role-experience-feature-list { margin: 24px 0; display: grid; gap: 12px; }
+.role-experience-feature-list article { padding: 13px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 18px; gap: 10px; align-items: center; border-radius: 13px; background: #f4f8f1; }
+.role-experience-feature-list article > span { width: 40px; height: 40px; display: grid; place-items: center; color: var(--leaf); border-radius: 11px; background: white; }
+.role-experience-feature-list h3 { margin: 0 0 3px; color: var(--forest-950); font-size: 15px; }
+.role-experience-feature-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.role-experience-feature-list article > svg { width: 18px; color: var(--leaf); }
+.role-experience-boundary { padding: 13px; display: flex; gap: 10px; align-items: center; color: var(--forest-900); border-radius: 13px; background: #e8f3e5; }
+.role-experience-boundary span, .role-experience-boundary small { display: block; }
+@media (max-width: 760px) {
+  .role-experience-main { display: block; padding: 28px 0 60px; }
+  .role-experience-hero { grid-template-columns: 1fr; }
+  .role-experience-copy h1 { max-width: none; }
+  .role-experience-preview { padding: 18px; }
+  .role-experience-topbar .button { font-size: 12px; }
+}
 .greenfin-complete-label { display: inline-flex; align-items: center; gap: 6px; color: var(--leaf); font-size: 13px; font-weight: 900; }
 .greenfin-complete-label svg { width: 18px; }
 @media (max-width: 1050px) {
@@ -1340,6 +1400,9 @@ td svg { width: 17px; }
   .greenfin-stage-list { grid-column: 1 / -1; }
 }
 @media (max-width: 680px) {
+  .greenfin-demo-admin-grid { grid-template-columns: 1fr; }
+  .greenfin-demo-admin-intro { align-items: flex-start; flex-direction: column; }
+  .greenfin-demo-admin-intro aside { text-align: left; }
   .greenfin-workspace-summary, .greenfin-dimension-grid { grid-template-columns: 1fr; }
   .greenfin-stage-list { grid-column: auto; }
   .greenfin-level-card strong { font-size: 40px; }

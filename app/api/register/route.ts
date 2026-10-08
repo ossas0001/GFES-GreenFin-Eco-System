@@ -1,7 +1,7 @@
 import { createAuthSession, PlatformRole, sessionCookie } from "../../../db/auth";
 import { createPasswordCredential } from "../../../db/credentials";
 import { getPlatformDb } from "../../../db/platform";
-import { consumerWelcomeGrant } from "../../../db/welcome";
+import { CONSUMER_WELCOME_POINTS, consumerWelcomeGrant } from "../../../db/welcome";
 
 const registrationRoles = new Set<PlatformRole>(["consumer", "farmer", "institution"]);
 const defaultLocation: Record<Exclude<PlatformRole, "admin">, { city: string; district: string }> = {
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     const session = await createAuthSession(profileId, role);
-    return Response.json({ authenticated: true, role, username, csrfToken: session.csrfToken, expiresAt: session.expiresAt }, {
+    return Response.json({ authenticated: true, role, username, csrfToken: session.csrfToken, expiresAt: session.expiresAt, welcomePoints: role === "consumer" ? CONSUMER_WELCOME_POINTS : 0 }, {
       status: 201,
       headers: { "Set-Cookie": sessionCookie(session.token, request, role), "Cache-Control": "no-store" },
     });

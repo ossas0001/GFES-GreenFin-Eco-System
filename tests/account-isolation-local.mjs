@@ -74,7 +74,7 @@ for (const data of [firstSnapshot, secondSnapshot]) {
   assert.deepEqual(data.orders, []);
   assert.equal(data.ledger.length, 1);
   assert.equal(data.ledger[0].deltaPoints, 500);
-  assert.equal(data.ledger[0].sourceType, "platform_reward");
+  assert.equal(data.ledger[0].sourceType, "consumer_welcome");
   assert.deepEqual(data.supportedProjectIds, []);
   assert.deepEqual(data.redeemedProductIds, []);
   assert.deepEqual(data.actionSubmissions, []);

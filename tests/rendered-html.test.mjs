@@ -221,7 +221,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /查看正式繳交文件範例/);
   assert.match(demo, /不接受無關的一般照片/);
   assert.match(demo, /FarmerGreenFinPage/);
-  assert.match(demo, /選擇 PDF、圖片或 XLSX/);
+  assert.match(demo, /選擇 PDF、PNG、JPG 或 HEIC/);
   assert.match(demo, /上傳並執行 SIMULATED OCR/);
   assert.match(uploadRoute, /submissionType === "farmer_evidence"/);
   assert.match(uploadRoute, /farmer-evidence\//);
@@ -346,7 +346,8 @@ test("provides a root consumer portal and three locked backend URLs", async () =
   assert.match(demo, /專屬角色入口/);
   assert.match(demo, /這是\$\{loginRoles\[initialPortal\]\.label\}專用入口/);
   assert.match(googleRoute, /Location: `\$\{portalPath\}\?\$\{params\}`/);
-  assert.match(googleCallback, /Location: `\$\{portalPath\}\?auth=google`/);
+  assert.match(googleCallback, /Location: `\$\{portalPath\}\?auth=google\$\{isNewConsumer/);
+  assert.match(googleCallback, /welcomePoints=\$\{CONSUMER_WELCOME_POINTS\}/);
 });
 
 test("keeps Google users on isolated real accounts", async () => {

@@ -1514,8 +1514,8 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
   const greenFinProgressStats = viewer?.role === "farmer"
     ? await queryOne<Record<string, number>>(db, `SELECT
         (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ?) AS document_count,
-        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('NORMALIZED', 'VERIFIED')) AS processed_document_count,
-        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status = 'VERIFIED') AS verified_document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('SUBMITTED', 'APPROVED', 'REJECTED', 'NORMALIZED', 'VERIFIED')) AS processed_document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('APPROVED', 'VERIFIED')) AS verified_document_count,
         (SELECT COUNT(*) FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1) AS action_count,
         (SELECT COUNT(*) FROM greenfin_experience_transactions WHERE farmer_id = ? AND rule_version = ?) AS experience_transaction_count,
         (SELECT COUNT(DISTINCT indicator_type) FROM greenfin_indicator_results WHERE farmer_id = ? AND rule_version = ?) AS indicator_count,
