@@ -1,6 +1,7 @@
 import { createAuthSession, PlatformRole, sessionCookie } from "../../../db/auth";
 import { createPasswordCredential } from "../../../db/credentials";
 import { getPlatformDb } from "../../../db/platform";
+import { consumerWelcomeGrant } from "../../../db/welcome";
 
 const registrationRoles = new Set<PlatformRole>(["consumer", "farmer", "institution"]);
 const defaultLocation: Record<Exclude<PlatformRole, "admin">, { city: string; district: string }> = {
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
         (profile_id, email, username, account_kind, status, password_hash, password_salt, auth_provider, updated_at)
         VALUES (?, ?, ?, 'real', ?, ?, ?, 'password', CURRENT_TIMESTAMP)`)
         .bind(profileId, email, username, accountStatus, credential.passwordHash, credential.passwordSalt),
+      ...(role === "consumer" ? [consumerWelcomeGrant(db, profileId)] : []),
     ]);
 
     if (requiresApproval) {

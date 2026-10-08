@@ -2,8 +2,6 @@ import { hashOpaqueToken } from "../../../../db/credentials";
 import { PlatformRole } from "../../../../db/auth";
 import { getPlatformDb } from "../../../../db/platform";
 
-const registrationRoles = new Set<PlatformRole>(["consumer", "farmer", "institution"]);
-
 function randomUrlSafeToken(byteLength = 32) {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -45,14 +43,14 @@ async function oauthAttemptKey(request: Request) {
 
 export async function GET(request: Request) {
   const role = new URL(request.url).searchParams.get("role") as PlatformRole | null;
-  if (!role || !registrationRoles.has(role)) return returnWithError(request, "請先選擇消費者、小農或銀行／政府／企業角色。", role);
+  if (role !== "consumer") return returnWithError(request, "Google 登入僅提供消費者使用，其他角色請使用帳號密碼登入。", role);
 
   const { env } = await import("cloudflare:workers");
   const configured = env as unknown as { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; GOOGLE_REDIRECT_URI?: string };
   const secrets = {
-    GOOGLE_CLIENT_ID: request.headers.get("x-gfes-internal-google-client-id") ?? configured.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: request.headers.get("x-gfes-internal-google-client-secret") ?? configured.GOOGLE_CLIENT_SECRET,
-    GOOGLE_REDIRECT_URI: request.headers.get("x-gfes-internal-google-redirect-uri") ?? configured.GOOGLE_REDIRECT_URI,
+    GOOGLE_CLIENT_ID: configured.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: configured.GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI: configured.GOOGLE_REDIRECT_URI,
   };
   if (!secrets.GOOGLE_CLIENT_ID || !secrets.GOOGLE_CLIENT_SECRET || !secrets.GOOGLE_REDIRECT_URI) {
     return returnWithError(request, "Google 註冊尚未完成 Client ID、Client Secret 與回呼網址設定。", role);

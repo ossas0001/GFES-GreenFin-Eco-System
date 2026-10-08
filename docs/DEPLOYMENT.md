@@ -2,6 +2,8 @@
 
 ## Current status
 
+This section records the deployment completed before the 2026-10-08 local audit. Later local patches, including the login, upload, responsive layout and demo-label changes, have not been deployed or verified against the production D1/R2 bindings.
+
 - Public repository: `https://github.com/ossas0001/GFES-GreenFin-Eco-System`
 - Canonical production URL: `https://gfes-green-consumption.pages.dev`
 - Pages project: `gfes-green-consumption`

@@ -43,7 +43,6 @@ import {
   Settings,
   ScanLine,
   ShoppingBasket,
-  Smartphone,
   Sprout,
   Store,
   Truck,
@@ -234,6 +233,7 @@ type ImprovementProjectDraft = {
 };
 
 type FarmerStory = {
+  isDemo?: boolean;
   farmerId: string;
   farmerName: string;
   city: string;
@@ -254,6 +254,7 @@ type FarmerStory = {
 };
 
 type FarmerNews = {
+  isDemo?: boolean;
   id: string;
   farmerId: string;
   farmerName: string;
@@ -1093,7 +1094,6 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   const [consumerPage, setConsumerPage] = useState<ConsumerPage>("overview");
   const [farmerPage, setFarmerPage] = useState<FarmerPage>("overview");
   const [institutionPage, setInstitutionPage] = useState<InstitutionPage>("overview");
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [selectedStoryId, setSelectedStoryId] = useState<string>(stories[0].id);
   const [toast, setToast] = useState("");
   const [cycleOpen, setCycleOpen] = useState(false);
@@ -1101,7 +1101,9 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   const [backendState, setBackendState] = useState<BackendSnapshot | null>(null);
   const [backendError, setBackendError] = useState("");
   const [backendBusy, setBackendBusy] = useState(false);
-  const [accountLoading, setAccountLoading] = useState(initialSessionExpected || (Boolean(initialPortal) && initialPortal !== "consumer"));
+  const [accountLoading, setAccountLoading] = useState(initialSessionExpected);
+  const [googleRedirecting, setGoogleRedirecting] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [sessionRestoreError, setSessionRestoreError] = useState("");
   const [sessionRestoreAttempt, setSessionRestoreAttempt] = useState(0);
   const [loginError, setLoginError] = useState("");
@@ -1265,10 +1267,9 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
 
   useEffect(() => {
     void (async () => {
-      setAccountLoading(true);
+      if (initialSessionExpected) setAccountLoading(true);
       setSessionRestoreError("");
       try {
-        await refreshPublicContent();
         const params = new URLSearchParams(window.location.search);
         const oauthError = params.get("authError");
         const oauthRole = params.get("authRole") as LoginRole | null;
@@ -1294,11 +1295,12 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         const roleForPath = initialPortal ?? loginRole;
         const response = await fetch("/api/auth", { cache: "no-store", credentials: "same-origin", headers: { "x-gfes-role": roleForPath } });
         if (response.status === 401) {
+          // Only the public home uses stories and news; dashboards do not need this request.
+          void refreshPublicContent();
           setCsrfToken("");
           setBackendState(null);
           if (initialPortal) {
             setLoginRole(initialPortal);
-            setModal("login");
           }
           return;
         }
@@ -1307,8 +1309,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         if (initialPortal && session.role !== initialPortal) {
           setCsrfToken("");
           setLoginRole(initialPortal);
-          setLoginError(`這是${loginRoles[initialPortal].label}專用入口，請使用對應角色帳號登入。原角色仍保持登入。`);
-          setModal("login");
+          setToast(`這是${loginRoles[initialPortal].label}專用入口；目前帳戶仍保持登入，請按「登入平台」切換角色。`);
           return;
         }
         setBackendState(null);
@@ -1323,13 +1324,29 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         setAccountLoading(false);
       }
     })();
-  }, [initialPortal, sessionRestoreAttempt]);
+  }, [initialPortal, initialSessionExpected, sessionRestoreAttempt]);
 
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!(event.target as Element).closest("[data-profile-menu]")) setProfileMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [profileMenuOpen]);
 
   useEffect(() => {
     if (screen !== "dashboard" || adminMode) return;
@@ -1604,7 +1621,9 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   }
 
   async function backHome() {
+    setProfileMenuOpen(false);
     await fetch("/api/auth", { method: "DELETE", credentials: "same-origin", headers: { "x-gfes-role": requestRole } }).catch(() => undefined);
+    void refreshPublicContent();
     setCsrfToken("");
     setBackendState(null);
     setBackendError("");
@@ -1613,10 +1632,8 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
     setScreen("home");
     if (initialPortal) {
       setLoginRole(initialPortal);
-      setModal("login");
-    } else {
-      setModal(null);
     }
+    setModal(null);
     window.scrollTo({ top: 0 });
   }
 
@@ -1793,7 +1810,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setToast("四頁正式版 PDF 影響力摘要已下載");
+    setToast("平台範例 PDF 已下載；檔案不含本帳戶即時成果");
   }
 
   function downloadReceipt(item: LocalProject = receiptProject) {
@@ -1831,9 +1848,12 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
           onEnter={enterDashboard}
           onRegister={registerAccount}
           onGoogleLogin={(selectedRole) => {
-            const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-            const authOrigin = isLocalPreview ? "https://gfes-green-consumption.pages.dev" : "";
-            window.location.assign(`${authOrigin}/api/auth/google?role=${encodeURIComponent(selectedRole)}`);
+            if (selectedRole !== "consumer") {
+              setLoginError("Google 登入僅提供消費者使用，其他角色請使用帳號密碼登入。");
+              return;
+            }
+            setGoogleRedirecting(true);
+            window.setTimeout(() => window.location.assign(`/api/auth/google?role=${encodeURIComponent(selectedRole)}`), 30);
           }}
         />
       )}
@@ -1935,8 +1955,8 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
     </>
   );
 
-  if (accountLoading) {
-    return <div className="admin-loading" role="status" aria-live="polite"><Brand /><h1>正在載入您的專屬帳戶</h1><p>確認身分與個人資料後才會顯示功能頁面</p></div>;
+  if (accountLoading || googleRedirecting) {
+    return <div className="admin-loading" role="status" aria-live="polite"><Brand /><h1>登入中，正在準備你的帳戶</h1><p>{googleRedirecting ? "正在前往 Google 授權頁面" : "正在確認身分並載入帳戶資料"}</p></div>;
   }
 
   if (sessionRestoreError) {
@@ -1957,7 +1977,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
 
   if (screen === "dashboard") {
     return (
-      <div className={`site-shell dashboard-shell ${previewMode === "mobile" ? "device-preview-mobile dashboard-device-preview" : ""}`}>
+      <div className="site-shell dashboard-shell">
         <div className="dashboard">
           <aside className="sidebar">
             <button className="brand brand-button" onClick={backHome}><Brand /></button>
@@ -1999,7 +2019,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
 
           <main className="dashboard-main">
             {backendError && <div className="backend-status" role="alert">{backendError} <button type="button" onClick={() => void refreshBackend()}>重新連線</button></div>}
-            <header className="dashboard-top">
+            <header className={`dashboard-top ${role === "institution" ? "institution-dashboard-top" : ""}`}>
               <div>
                 <h1>{role === "consumer"
                   ? ({ overview: "消費者中心", local: `用綠點支持在地｜您的所在地：${backendState ? `${backendState.consumer.city}${backendState.consumer.district}` : "台北市大安區"}`, invoice: "回傳消費證明", receipt: "影響力收據", orders: "兌換訂單", settings: "帳戶設定" } as const)[consumerPage]
@@ -2037,16 +2057,17 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
                               : "以下資料由平台後台統一管理"}</p>
               </div>
               <div className="dashboard-top-actions">
-                <div className={`device-toggle dashboard-device-toggle ${previewMode}`} role="group" aria-label="切換功能頁裝置預覽">
-                  <span className="device-toggle-thumb" aria-hidden="true" />
-                  <button type="button" className={previewMode === "desktop" ? "active" : ""} aria-pressed={previewMode === "desktop"} onClick={() => setPreviewMode("desktop")}><Monitor />網頁</button>
-                  <button type="button" className={previewMode === "mobile" ? "active" : ""} aria-pressed={previewMode === "mobile"} onClick={() => setPreviewMode("mobile")}><Smartphone />手機</button>
+                <div className="profile-menu" data-profile-menu>
+                  <button className="profile-button" type="button" aria-label="帳號選單" aria-haspopup="menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((open) => !open)}>
+                    <span className="avatar"><User /></span>
+                    <span>{signedInDisplayName ?? roles[role].account}</span>
+                    <ChevronRight />
+                  </button>
+                  {profileMenuOpen && <div className="profile-popover" role="menu" aria-label="帳號選單">
+                    <div className="profile-popover-account"><strong>{signedInDisplayName ?? roles[role].account}</strong><small>{roles[role].label}</small></div>
+                    <button type="button" role="menuitem" onClick={() => void backHome()}><LogOut />登出帳號</button>
+                  </div>}
                 </div>
-                <button className="profile-button" onClick={openLogin}>
-                  <span className="avatar"><User /></span>
-                  <span>{signedInDisplayName ?? roles[role].account}</span>
-                  <ChevronRight />
-                </button>
               </div>
             </header>
 
@@ -2272,16 +2293,11 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   }
 
   return (
-    <div className={`site-shell home-site ${previewMode === "mobile" ? "device-preview-mobile" : ""}`}>
+    <div className="site-shell home-site">
       <header className="topbar">
         <nav className="container nav">
           <div className="nav-brand-group">
             <button className="brand brand-button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Brand /></button>
-            <div className={`device-toggle ${previewMode}`} role="group" aria-label="切換首頁裝置預覽">
-              <span className="device-toggle-thumb" aria-hidden="true" />
-              <button type="button" className={previewMode === "desktop" ? "active" : ""} aria-pressed={previewMode === "desktop"} onClick={() => setPreviewMode("desktop")}><Monitor />網頁</button>
-              <button type="button" className={previewMode === "mobile" ? "active" : ""} aria-pressed={previewMode === "mobile"} onClick={() => setPreviewMode("mobile")}><Smartphone />手機</button>
-            </div>
           </div>
           <div className="nav-links">
             <a href="#stories">在地行動</a>
@@ -2366,7 +2382,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         <section className="section section-soft" id="stories">
           <div className="container">
             <header className="section-heading">
-              <span className="eyebrow">從土地開始</span>
+              <span className="eyebrow">DEMO／SIMULATED・從土地開始</span>
               <h2>看見每一份綠色選擇背後的行動</h2>
               <p>從綠色消費、低碳交通、電子帳單到企業與政府激勵，讓每一點支持都有清楚去向，也讓地方農業持續成長。</p>
             </header>
@@ -2403,9 +2419,9 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         <section className="section section-dark" id="impact">
           <div className="container">
             <header className="section-heading">
-              <span className="eyebrow">共同影響力</span>
+              <span className="eyebrow">DEMO／SIMULATED・共同影響力</span>
               <h2>讓支持不只是一個數字</h2>
-              <p>平台記錄綠點如何從多元行動回到小農，並形成可揭露的環境、地方與永續經濟成果。</p>
+              <p>以下數字為提案展示用模擬資料，不代表實際交易或環境效益。</p>
             </header>
             <div className="impact-grid">
               <Impact icon={Users} value="128" label="受支持在地農戶" />
@@ -2440,10 +2456,6 @@ function RoleCycleExplorer() {
     <div id="role-cycle-explorer" className={`role-cycle-explorer ${activeRole ? "has-focus" : ""}`}>
       <div className="role-cycle-stage" aria-label="消費者、合作小農與銀行政府企業的綠點循環">
         <div className="role-cycle-orbit" aria-hidden="true">
-          <span className="cycle-direction-arrow cycle-direction-arrow-top-right">↖</span>
-          <span className="cycle-direction-arrow cycle-direction-arrow-top-left">↙</span>
-          <span className="cycle-direction-arrow cycle-direction-arrow-bottom-left">↘</span>
-          <span className="cycle-direction-arrow cycle-direction-arrow-bottom-right">↗</span>
         </div>
         <div className="cycle-core"><HandCoins /><strong>綠點循環</strong><small>獎勵・支持・成果</small></div>
         <span className="cycle-link cycle-link-grant">發放與配對綠點</span>
@@ -2470,6 +2482,7 @@ function RoleCycleExplorer() {
             </button>
           );
         })}
+        <span className="cycle-mobile-support">支持專案與兌換</span>
       </div>
       <div className={`role-cycle-detail ${activeInfo ? "visible" : ""}`} aria-live="polite">
         {activeInfo && activeRole ? (
@@ -2526,16 +2539,16 @@ function FarmerNewsFeed({ news, emptyText = "目前尚無小農最新消息。" 
   if (news.length === 0) return <div className="farmer-news-empty"><Newspaper /><p>{emptyText}</p></div>;
   return <div className="farmer-news-grid">{news.map((item) => <article className={`farmer-news-card ${item.image ? "" : "no-image"}`} key={item.id}>
     {item.image && <img src={item.image} alt={`${item.farmerName}・${item.title}`} />}
-    <div><span className="farmer-news-category">{item.category}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未開始"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
+    <div><span className="farmer-news-category">{item.category}{item.isDemo ? "・DEMO" : ""}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未開始"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
   </article>)}</div>;
 }
 
 function FarmerUpdatesSection({ stories: farmerStories, news }: PublicContent) {
   if (farmerStories.length === 0 && news.length === 0) return null;
   return <section className="section farmer-updates-section" id="farmer-updates"><div className="container">
-    <header className="section-heading"><span className="eyebrow">產地即時連線</span><h2>小農故事與最新消息</h2><p>由合作小農親自更新耕作故事、採收近況與改善專案進度。</p></header>
+    <header className="section-heading"><span className="eyebrow">產地即時連線</span><h2>小農故事與最新消息</h2><p>小農可更新耕作故事與採收近況；測試帳號內容標示為 DEMO。</p></header>
     {farmerStories.length > 0 && <div className="farmer-story-grid">{farmerStories.slice(0, 4).map((story) => <article className="farmer-story-card" key={story.farmerId}>
-      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未開始"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
+      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}{story.isDemo ? "・DEMO" : ""}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未開始"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
     </article>)}</div>}
     <div className="farmer-updates-news-heading"><div><span className="eyebrow">最新發布</span><h3>小農最新消息</h3></div><span>共 {news.length} 則</span></div>
     <FarmerNewsFeed news={news.slice(0, 6)} />
@@ -3133,10 +3146,10 @@ function LoginModal({
               <button className="button button-primary button-block" type="submit" disabled={busy}>
                 {role === "consumer" ? "登入消費者前台" : `登入${loginRoles[role].label}後台`}<ArrowRight />
               </button>
-              {role !== "admin" && (
+              {role === "consumer" && (!lockedRole || lockedRole === "consumer") && (
                 <>
                   <div className="auth-divider"><span>或</span></div>
-                  <button className="google-register-button" type="button" disabled={busy} onClick={() => onGoogleLogin(role)}><span aria-hidden="true">G</span>使用 Google 登入</button>
+                  <button className="google-register-button" type="button" disabled={busy} onClick={() => onGoogleLogin("consumer")}><span aria-hidden="true">G</span>使用 Google 登入</button>
                 </>
               )}
             </form>
@@ -3259,6 +3272,7 @@ function ConsumerDashboard({
   const [selectedActionType, setSelectedActionType] = useState(greenActions[0].type);
   const [proofNote, setProofNote] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofFileError, setProofFileError] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
   const [proofConfirmOpen, setProofConfirmOpen] = useState(false);
   const selectedAction = greenActions.find((item) => item.type === selectedActionType) ?? greenActions[0];
@@ -3267,6 +3281,19 @@ function ConsumerDashboard({
     event.preventDefault();
     if (!proofFile) return;
     setProofConfirmOpen(true);
+  }
+
+  function handleProofFileChange(file: File | null) {
+    setProofFileError("");
+    if (!file) { setProofFile(null); return; }
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!["pdf", "png", "jpg", "jpeg", "heic"].includes(extension)) {
+      setProofFile(null);
+      setProofFileError("檔案格式不支援，僅接受 PDF、PNG、JPG、JPEG 或 HEIC 檔案。");
+      setFileInputKey((current) => current + 1);
+      return;
+    }
+    setProofFile(file);
   }
 
   async function confirmProofSubmit() {
@@ -3303,9 +3330,10 @@ function ConsumerDashboard({
           <p className="action-proof-guidance"><BadgeCheck />範例均為正式文件版型；實際送件請上傳原始票證、帳單、發票或核發紀錄，不接受無關的一般照片。</p>
           <label className="action-proof-file">
             <Upload />
-            <span><b>{proofFile ? proofFile.name : "選擇正式證明檔案"}</b><small>優先使用 PDF；圖片僅限原始票證、帳單或核發證明，最大 10 MB</small></span>
-            <input key={fileInputKey} type="file" accept="image/*,application/pdf" onChange={(event) => setProofFile(event.target.files?.[0] ?? null)} required />
+            <span><b>{proofFile ? proofFile.name : "選擇正式證明檔案"}</b><small>僅接受 PDF、PNG、JPG、JPEG 或 HEIC，最大 10 MB</small></span>
+            <input key={fileInputKey} type="file" accept=".pdf,.png,.jpg,.jpeg,.heic,application/pdf,image/png,image/jpeg,image/heic,image/heif" onChange={(event) => handleProofFileChange(event.target.files?.[0] ?? null)} required />
           </label>
+          {proofFileError && <div className="login-error" role="alert">{proofFileError}</div>}
           <label className="action-proof-note">補充說明（選填）<textarea rows={3} value={proofNote} onChange={(event) => setProofNote(event.target.value)} placeholder="例如：8 月 10 日於大安區合作店家使用環保杯" /></label>
           <button className="button button-primary action-proof-submit" type="submit" disabled={busy || !proofFile}>{busy ? "正在送出…" : "送出證明，等待審核"}<ArrowRight /></button>
           {actionSubmissions.length > 0 && <div className="action-submission-history">
@@ -3871,25 +3899,30 @@ function InstitutionDashboard({
   const totalBudget = programs.reduce((sum, program) => sum + program.budgetPoints, 0);
   const participants = programs.reduce((sum, program) => sum + Number(program.participants.replace(/[^0-9]/g, "") || 0), 0);
   const verifiedOutcomes = outcomes.filter((outcome) => outcome.status === "verified");
+  const demoVerifiedCount = verifiedOutcomes.filter((outcome) => /DEMO|SIMULATED|MOCK/i.test(outcome.note)).length;
   const carbonKg = verifiedOutcomes.reduce((sum, outcome) => sum + Number(outcome.carbonKg ?? 0), 0);
   const chartData = programs.length ? programs.map((program) => ({ name: program.name, funds: program.budgetPoints })) : [{ name: "尚無計畫", funds: 0 }];
+  const procurementQuantity = procurements.reduce((sum, item) => sum + item.quantity, 0);
+  const procurementBudget = procurements.reduce((sum, item) => sum + item.budgetPoints, 0);
+  const demoProcurements = procurements.filter((item) => /DEMO|SIMULATED|MOCK/i.test(item.title)).length;
   return (
     <>
       <div className="metrics">
         <Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} />
         <Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶計畫累計" />
-        <Metric icon={ShoppingBasket} value={`${procurements.length} 筆`} label="永續採購需求" delta="本帳戶建立" />
-        <Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={`${verifiedOutcomes.length} 筆成果`} />
+        <Metric icon={ShoppingBasket} value={`${procurements.length} 筆`} label="永續採購需求" delta={demoProcurements ? `含 ${demoProcurements} 筆 DEMO` : "本帳戶建立"} detail={procurements.length ? `${procurementQuantity.toLocaleString()} 份採購 · ${procurementBudget.toLocaleString()} 點預算` : "尚無採購需求"} />
+        <Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={demoVerifiedCount ? `含 ${demoVerifiedCount} 筆 DEMO` : `${verifiedOutcomes.length} 筆成果`} detail={demoVerifiedCount ? "SIMULATED・非實際量測" : verifiedOutcomes.length ? `${carbonKg.toLocaleString()} kg CO₂e · 已審核` : "尚無已審核成果"} />
       </div>
       <div className="dashboard-grid">
         <Panel className="span-8" title="本帳戶綠點激勵計畫" note="只顯示目前登入單位建立的計畫與預算">
-          <Chart><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="funds" name="計畫預算" fill="#2d7250" radius={[8, 8, 0, 0]} /></BarChart></Chart>
+          <div className="institution-budget-desktop"><Chart><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} minTickGap={0} height={42} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(value) => institutionBudgetLabel(String(value))} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="funds" name="計畫預算" fill="#2d7250" radius={[8, 8, 0, 0]} /></BarChart></Chart></div>
+          <InstitutionMobileBudgetChart data={chartData} />
         </Panel>
         <Panel className="span-4" title="帳戶履約概況" note="農業資源兌換與成果審核">
           <div className="report-highlights"><div><span><Truck /></span><p><b>{resourceRedemptions.length} 筆資源兌換</b><small>{resourceRedemptions.filter((item) => item.stage < 3).length} 筆處理中</small></p></div><div><span><FileCheck2 /></span><p><b>{outcomes.length} 筆成果回報</b><small>{outcomes.filter((item) => item.status === "submitted").length} 筆待審核</small></p></div></div>
         </Panel>
         <Panel className="span-12" title="帳戶資料摘要" note="所有數量均依目前登入單位的 D1 資料計算" action={<div className="panel-actions"><button className="button button-secondary" onClick={() => onDetail()}><PackageCheck />管理激勵計畫</button><button className="button button-secondary" onClick={onDownload}><Download />查看成果報告</button></div>}>
-          {programs.length === 0 && procurements.length === 0 ? <div className="empty-receipt"><span><Building2 /></span><h3>這個帳戶尚未建立計畫或採購需求</h3><p>前往「綠點激勵計畫」建立第一筆專屬資料。</p></div> : <div className="table-wrap"><table className="mobile-card-table farmers-table"><thead><tr><th>類型</th><th>名稱</th><th>預算／數量</th><th>狀態</th></tr></thead><tbody>{programs.map((program) => <tr key={program.id}><td>激勵計畫</td><td><b>{program.name}</b></td><td>{program.budgetPoints.toLocaleString()} 點</td><td>{program.progress}%</td></tr>)}{procurements.map((item) => <tr key={item.id}><td>採購需求</td><td><b>{item.title}</b></td><td>{item.quantity.toLocaleString()} 份</td><td>{item.status}</td></tr>)}</tbody></table></div>}
+          {programs.length === 0 && procurements.length === 0 ? <div className="empty-receipt"><span><Building2 /></span><h3>這個帳戶尚未建立計畫或採購需求</h3><p>前往「綠點激勵計畫」建立第一筆專屬資料。</p></div> : <div className="table-wrap"><table className="mobile-card-table institution-summary-table"><thead><tr><th>類型</th><th>名稱</th><th>預算／數量</th><th>狀態</th></tr></thead><tbody>{programs.map((program) => <tr key={program.id}><td>激勵計畫</td><td><b>{program.name}</b></td><td>{program.budgetPoints.toLocaleString()} 點</td><td>{program.progress}%</td></tr>)}{procurements.map((item) => <tr key={item.id}><td>採購需求</td><td><b>{item.title}</b></td><td>{item.quantity.toLocaleString()} 份</td><td>{item.status}</td></tr>)}</tbody></table></div>}
         </Panel>
       </div>
     </>
@@ -4555,6 +4588,7 @@ function InstitutionPortfolioPage({
   const supportedFarmers = new Set(resourceRedemptions.map((item) => item.farmerId)).size;
   const verifiedOutcomes = outcomes.filter((item) => item.status === "verified");
   const carbonKg = verifiedOutcomes.reduce((sum, item) => sum + Number(item.carbonKg ?? 0), 0);
+  const hasDemoCarbon = verifiedOutcomes.some((item) => /DEMO|SIMULATED|MOCK/i.test(item.note));
   const [procurementTitle, setProcurementTitle] = useState("員工永續福利小農箱");
   const [procurementCategory, setProcurementCategory] = useState("友善農產箱");
   const [procurementQuantity, setProcurementQuantity] = useState(200);
@@ -4578,7 +4612,7 @@ function InstitutionPortfolioPage({
         {programs.length === 0 ? <div className="empty-receipt"><span><PackageCheck /></span><h3>尚未建立綠點激勵計畫</h3><p>建立後只會顯示在目前登入單位的後台。</p></div> : <div className="incentive-grid">{programs.map((program) => <article className="incentive-card" key={program.id}><header><span>{program.esg}</span><b>{program.name}</b><small>{program.sponsor}</small></header><p>{program.action}</p><div className="incentive-data"><span>回饋方式<b>{program.reward}</b></span><span>計畫預算<b>{program.budgetPoints.toLocaleString()} 點</b></span><span>參與對象<b>{program.participants}</b></span></div><div className="progress"><span style={{ width: `${program.progress}%` }} /></div><small>{program.progress === 0 ? "新建立・尚未開始" : `年度目標達成 ${program.progress}%`}</small></article>)}</div>}
       </Panel>
       <Panel className="span-12" title="ESG 可揭露成果" note="平台協助累積行動、點數流向與地方效益證據；正式評等仍依各揭露準則與評鑑機構認定">
-        <div className="table-wrap"><table className="mobile-card-table esg-table"><thead><tr><th>成果面向</th><th>可揭露指標</th><th>目前成果</th><th>佐證方式</th></tr></thead><tbody><tr><td>氣候行動</td><td>已驗證成果估算減碳</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e</td><td>成果審核紀錄</td></tr><tr><td>責任消費</td><td>激勵計畫參與</td><td>{participantTotal.toLocaleString()} 人次</td><td>本帳戶計畫資料</td></tr><tr><td>地方共好</td><td>農業資源履約涉及小農</td><td>{supportedFarmers} 戶</td><td>資源兌換紀錄</td></tr><tr><td>永續經濟</td><td>農業資源回流</td><td>{resourceRedemptions.reduce((sum, item) => sum + item.points, 0).toLocaleString()} 點</td><td>農會兌換紀錄</td></tr></tbody></table></div>
+        <div className="table-wrap"><table className="mobile-card-table esg-table"><thead><tr><th>成果面向</th><th>可揭露指標</th><th>目前成果</th><th>佐證方式</th></tr></thead><tbody><tr><td>氣候行動</td><td>已驗證成果估算減碳</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e{hasDemoCarbon ? "（含 DEMO／SIMULATED）" : ""}</td><td>成果審核紀錄</td></tr><tr><td>責任消費</td><td>激勵計畫參與</td><td>{participantTotal.toLocaleString()} 人次</td><td>本帳戶計畫資料</td></tr><tr><td>地方共好</td><td>農業資源履約涉及小農</td><td>{supportedFarmers} 戶</td><td>資源兌換紀錄</td></tr><tr><td>永續經濟</td><td>農業資源回流</td><td>{resourceRedemptions.reduce((sum, item) => sum + item.points, 0).toLocaleString()} 點</td><td>農會兌換紀錄</td></tr></tbody></table></div>
       </Panel>
     </div>
   );
@@ -4683,12 +4717,12 @@ function InstitutionReportPage({
   const participants = programs.reduce((sum, program) => sum + Number(program.participants.replace(/[^0-9]/g, "") || 0), 0);
   const verified = outcomes.filter((report) => report.status === "verified");
   const carbonKg = verified.reduce((sum, report) => sum + Number(report.carbonKg ?? 0), 0);
+  const demoVerifiedCount = verified.filter((report) => /DEMO|SIMULATED|MOCK/i.test(report.note)).length;
   const farmerCount = new Set(resourceRedemptions.map((item) => item.farmerId)).size;
-  const reportData = programs.length ? programs.map((program) => ({ month: program.name, funds: program.budgetPoints })) : [{ month: "尚無計畫", funds: 0 }];
-  const hasReportData = programs.length > 0 || outcomes.length > 0 || resourceRedemptions.length > 0;
+  const reportData = programs.length ? programs.map((program) => ({ name: program.name, funds: program.budgetPoints })) : [{ name: "尚無計畫", funds: 0 }];
   return (
     <>
-      <div className="metrics"><Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} /><Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶資料" /><Metric icon={Sprout} value={`${farmerCount} 戶`} label="履約涉及小農" delta={`${resourceRedemptions.length} 筆兌換`} /><Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={`${verified.length} 筆成果`} /></div>
+      <div className="metrics"><Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} /><Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶資料" /><Metric icon={Sprout} value={`${farmerCount} 戶`} label="履約涉及小農" delta={`${resourceRedemptions.length} 筆兌換`} /><Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={demoVerifiedCount ? `含 ${demoVerifiedCount} 筆 DEMO` : `${verified.length} 筆成果`} detail={demoVerifiedCount ? "SIMULATED・非實際量測" : undefined} /></div>
       <div className="dashboard-grid">
         <Panel className="span-12 outcome-review-panel" title="小農成果回報審核" note="核對節水、減碳與受益資料後，通過的成果會更新至資訊揭露與 ESG 報告">
           {outcomes.length === 0 ? <div className="empty-receipt"><span><FileCheck2 /></span><h3>目前沒有待審成果</h3><p>小農送出改善專案成果後會顯示在這裡。</p></div> : <div className="outcome-review-list">{outcomes.map((report) => {
@@ -4696,9 +4730,9 @@ function InstitutionReportPage({
             return <article key={report.id}><div><span className={`status-pill ${report.status === "verified" ? "" : "waiting"}`}>{report.status === "verified" ? "已通過" : "待審核"}</span><h3>{project?.title ?? report.projectId}</h3><p>{report.note}</p><small>節水 {report.waterLiters?.toLocaleString() ?? 0} 公升・減碳 {report.carbonKg?.toLocaleString() ?? 0} kg CO₂e・受益 {report.beneficiaries ?? 0} 人／戶</small></div>{report.status !== "verified" && <button className="button button-primary" onClick={() => onVerify(report.id)}><BadgeCheck />審核通過</button>}</article>;
           })}</div>}
         </Panel>
-        <Panel className="span-8 subpage-primary" title="綠點激勵投入" note="目前登入單位各項計畫預算"><Chart><BarChart data={reportData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="month" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="funds" name="計畫預算" fill="#2d7250" radius={[8, 8, 0, 0]} /></BarChart></Chart></Panel>
+        <Panel className="span-8 subpage-primary" title="綠點激勵投入" note="目前登入單位各項計畫預算"><div className="institution-budget-desktop"><Chart><BarChart data={reportData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} minTickGap={0} height={42} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(value) => institutionBudgetLabel(String(value))} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="funds" name="計畫預算" fill="#2d7250" radius={[8, 8, 0, 0]} /></BarChart></Chart></div><InstitutionMobileBudgetChart data={reportData} /></Panel>
         <Panel className="span-4" title="ESG 成果摘要" note="供銀行、政府與企業揭露及持續追蹤"><div className="report-highlights"><div><span><Trees /></span><p><b>環境面</b><small>節能家電、低碳交通、節水與減藥行動持續累積</small></p></div><div><span><Users /></span><p><b>社會面</b><small>在地小農收入、農業資源與地方供應鏈受益</small></p></div><div><span><PackageCheck /></span><p><b>治理面</b><small>點數來源、流向、履歷與成果保留可追溯紀錄</small></p></div></div></Panel>
-        <Panel className="span-12" title="可揭露成果範圍" note="平台提供績效證據；正式 ESG 評分仍依採用準則及評鑑機構認定" action={<button className="button button-primary" disabled={!hasReportData} onClick={onDownload}><Download />{hasReportData ? "下載正式版 PDF" : "尚無資料可下載"}</button>}><div className="pdf-report-preview"><span>PDF</span><div><b>目前登入單位的綠色消費與在地小農影響力摘要</b><small>{hasReportData ? "依本帳戶計畫、履約與成果紀錄彙整" : "建立計畫或完成成果審核後即可產生報告"}</small></div><em>GFES ACCOUNT REPORT</em></div><div className="table-wrap"><table className="mobile-card-table report-table"><thead><tr><th>成果面向</th><th>本期成果</th><th>資料來源</th><th>更新頻率</th></tr></thead><tbody><tr><td>綠點激勵參與</td><td>{participants.toLocaleString()} 人次</td><td>本帳戶激勵計畫</td><td>即時</td></tr><tr><td>計畫綠點預算</td><td>{totalBudget.toLocaleString()} 點</td><td>本帳戶計畫紀錄</td><td>即時</td></tr><tr><td>履約涉及小農</td><td>{farmerCount} 戶</td><td>農業資源兌換紀錄</td><td>即時</td></tr><tr><td>已驗證減碳成果</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e</td><td>通過審核的成果回報</td><td>每次審核</td></tr></tbody></table></div></Panel>
+        <Panel className="span-12" title="可揭露成果範圍" note="平台提供績效證據；正式 ESG 評分仍依採用準則及評鑑機構認定" action={<button className="button button-primary" onClick={onDownload}><Download />下載平台範例 PDF</button>}><div className="pdf-report-preview"><span>PDF</span><div><b>平台範例：綠色消費與在地小農影響力摘要</b><small>{demoVerifiedCount ? "下方本帳戶表格含 DEMO／SIMULATED 成果，非實際量測；PDF 為固定範例，不含本帳戶資料。" : "PDF 為固定範例，不含本帳戶資料；下方表格依目前登入單位資料顯示。"}</small></div><em>GFES SAMPLE REPORT</em></div><div className="table-wrap"><table className="mobile-card-table report-table"><thead><tr><th>成果面向</th><th>本期成果</th><th>資料來源</th><th>更新頻率</th></tr></thead><tbody><tr><td>綠點激勵參與</td><td>{participants.toLocaleString()} 人次</td><td>本帳戶激勵計畫</td><td>即時</td></tr><tr><td>計畫綠點預算</td><td>{totalBudget.toLocaleString()} 點</td><td>本帳戶計畫紀錄</td><td>即時</td></tr><tr><td>履約涉及小農</td><td>{farmerCount} 戶</td><td>農業資源兌換紀錄</td><td>即時</td></tr><tr><td>已驗證減碳成果</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e{demoVerifiedCount ? "（含 DEMO／SIMULATED）" : ""}</td><td>通過審核的成果回報</td><td>每次審核</td></tr></tbody></table></div></Panel>
       </div>
     </>
   );
@@ -4729,11 +4763,31 @@ function Chart({ children }: { children: React.ReactElement }) {
   return <div className="chart"><ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer></div>;
 }
 
-function Metric({ icon: Icon, value, label, delta }: { icon: typeof Users; value: string; label: string; delta: string }) {
+function institutionBudgetLabel(name: string, compact = false) {
+  if (name.includes("小農")) return compact ? "小農支持" : "偏鄉小農支持";
+  if (name.includes("在地") || name.includes("綠色消費")) return compact ? "在地消費" : "在地綠色消費";
+  if (name.includes("家電")) return compact ? "節能家電" : "節能家電汰舊";
+  if (name.includes("通勤")) return "低碳通勤綠點";
+  if (name.includes("帳單")) return compact ? "電子帳單" : "電子帳單轉換";
+  return Array.from(name).slice(0, compact ? 4 : 6).join("");
+}
+
+function InstitutionMobileBudgetChart({ data }: { data: Array<{ name: string; funds: number }> }) {
+  const maxFunds = Math.max(1, ...data.map((item) => item.funds));
+  return <div className="institution-mobile-budget-chart" role="list" aria-label="本帳戶各計畫綠點預算">
+    {data.map((item) => <div className="institution-budget-column" role="listitem" aria-label={`${item.name}：${item.funds.toLocaleString()} 點`} key={item.name}>
+      <strong>{new Intl.NumberFormat("zh-TW", { notation: "compact", maximumFractionDigits: 2 }).format(item.funds)}</strong>
+      <div className="institution-budget-bar-track"><span style={{ height: `${item.funds ? Math.max(5, item.funds / maxFunds * 100) : 0}%` }} /></div>
+      <small title={item.name}>{institutionBudgetLabel(item.name, true)}</small>
+    </div>)}
+  </div>;
+}
+
+function Metric({ icon: Icon, value, label, delta, detail }: { icon: typeof Users; value: string; label: string; delta: string; detail?: string }) {
   return (
     <article className="metric">
       <div><span><Icon /></span><small>{delta}</small></div>
-      <strong>{value}</strong><p>{label}</p>
+      <strong>{value}</strong><p>{label}</p>{detail && <span className="metric-detail">{detail}</span>}
     </article>
   );
 }

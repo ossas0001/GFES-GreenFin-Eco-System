@@ -38,7 +38,7 @@ for (const item of refreshCases) {
   for (let refresh = 0; refresh < 2; refresh += 1) {
     const page = await fetch(`${baseUrl}${item.path}`, { headers: { cookie: item.session.cookie } });
     assert.equal(page.status, 200, `${item.role} portal must remain reachable after refresh`);
-    assert.match(await page.text(), /正在載入您的專屬帳戶/, `${item.role} refresh must not render the public home before session restoration`);
+    assert.match(await page.text(), /登入中，正在準備你的帳戶/, `${item.role} refresh must not render the public home before session restoration`);
     const persisted = await fetch(`${baseUrl}/api/auth`, { headers: { cookie: item.session.cookie, "x-gfes-role": item.role } });
     assert.equal(persisted.status, 200, `a page refresh must preserve the ${item.role} session`);
     assert.equal((await persisted.json()).role, item.role);

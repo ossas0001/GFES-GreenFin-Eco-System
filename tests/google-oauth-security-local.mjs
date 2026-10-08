@@ -17,6 +17,12 @@ function assertLocalErrorRedirect(response, label) {
 const invalidRole = await manualRedirect("/api/auth/google?role=admin");
 assertLocalErrorRedirect(invalidRole, "admin self-registration");
 
+for (const role of ["farmer", "institution"]) {
+  const response = await manualRedirect(`/api/auth/google?role=${role}`);
+  assertLocalErrorRedirect(response, `${role} Google sign-in`);
+  assert.match(response.headers.get("location") ?? "", /Google/, `${role} must be told to use a password`);
+}
+
 const unknownRole = await manualRedirect("/api/auth/google?role=attacker");
 assertLocalErrorRedirect(unknownRole, "unknown role");
 
@@ -37,6 +43,12 @@ if (googleLocation.startsWith("https://accounts.google.com/")) {
   assert.match(googleStart.headers.get("set-cookie") ?? "", /gfes_oauth_state=/, "configured Google flow must bind state to the initiating browser");
 } else {
   assert.match(googleLocation, /^\/\?authError=/, "unconfigured Google flow must fail locally without leaving this site");
+  const injected = await manualRedirect("/api/auth/google?role=consumer", {
+    "x-gfes-internal-google-client-id": "attacker-client",
+    "x-gfes-internal-google-client-secret": "attacker-secret",
+    "x-gfes-internal-google-redirect-uri": `${baseUrl}/api/auth/google/callback`,
+  });
+  assert.match(injected.headers.get("location") ?? "", /^\/\?authError=/, "request headers must not configure Google OAuth");
 }
 
 const [startSource, callbackSource, authSource] = await Promise.all([
@@ -48,6 +60,7 @@ const [startSource, callbackSource, authSource] = await Promise.all([
 assert.match(startSource, /code_challenge_method", "S256"/, "PKCE S256 must be enabled");
 assert.match(startSource, /scope", "openid email profile"/, "Google scopes must stay minimal");
 assert.match(startSource, /GOOGLE_REDIRECT_URI/, "redirect URI must come from server-side configuration");
+assert.doesNotMatch(startSource + callbackSource, /x-gfes-internal-google-/, "OAuth credentials must not be overridden by request headers");
 assert.match(startSource, /HttpOnly; SameSite=Lax/, "OAuth state cookie must be inaccessible to scripts and survive the top-level callback");
 assert.match(startSource, /recentAttempts/, "OAuth starts must be rate limited");
 assert.doesNotMatch(startSource, /access_type.*offline/, "registration must not request a refresh token");

@@ -1,6 +1,7 @@
 import { createAuthSession, PlatformRole, sessionCookie } from "../../../../../db/auth";
 import { hashOpaqueToken } from "../../../../../db/credentials";
 import { getPlatformDb } from "../../../../../db/platform";
+import { consumerWelcomeGrant } from "../../../../../db/welcome";
 
 type GoogleUser = { sub?: string; email?: string; email_verified?: boolean; name?: string };
 
@@ -56,12 +57,15 @@ export async function GET(request: Request) {
   if (!savedState || Date.parse(savedState.expires_at) <= Date.now()) {
     return returnWithError(request, "Google 註冊驗證已逾時，請重新操作。");
   }
+  if (savedState.role !== "consumer") {
+    return returnWithError(request, "Google 登入僅提供消費者使用，其他角色請使用帳號密碼登入。", savedState.role);
+  }
 
   const { env } = await import("cloudflare:workers");
   const configured = env as unknown as { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
   const secrets = {
-    GOOGLE_CLIENT_ID: request.headers.get("x-gfes-internal-google-client-id") ?? configured.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: request.headers.get("x-gfes-internal-google-client-secret") ?? configured.GOOGLE_CLIENT_SECRET,
+    GOOGLE_CLIENT_ID: configured.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: configured.GOOGLE_CLIENT_SECRET,
   };
   if (!secrets.GOOGLE_CLIENT_ID || !secrets.GOOGLE_CLIENT_SECRET) return returnWithError(request, "Google 註冊服務尚未完成設定。", savedState.role);
 
@@ -124,6 +128,7 @@ export async function GET(request: Request) {
         (profile_id, email, username, account_kind, status, auth_provider, provider_subject, updated_at)
         VALUES (?, ?, ?, 'real', ?, 'google', ?, CURRENT_TIMESTAMP)`)
         .bind(profileId, email, username, accountStatus, subject),
+      ...(savedState.role === "consumer" ? [consumerWelcomeGrant(db, profileId)] : []),
     ]);
   }
 
