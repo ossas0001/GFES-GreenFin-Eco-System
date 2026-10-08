@@ -1,6 +1,7 @@
 import { createAuthSession, PlatformRole, sessionCookie } from "../../../../../db/auth";
 import { hashOpaqueToken } from "../../../../../db/credentials";
 import { getPlatformDb } from "../../../../../db/platform";
+import { CONSUMER_WELCOME_POINTS, consumerWelcomeGrant } from "../../../../../db/welcome";
 
 type GoogleUser = { sub?: string; email?: string; email_verified?: boolean; name?: string };
 
@@ -56,12 +57,15 @@ export async function GET(request: Request) {
   if (!savedState || Date.parse(savedState.expires_at) <= Date.now()) {
     return returnWithError(request, "Google 註冊驗證已逾時，請重新操作。");
   }
+  if (savedState.role !== "consumer") {
+    return returnWithError(request, "Google 登入僅提供消費者使用，其他角色請使用帳號密碼登入。", savedState.role);
+  }
 
   const { env } = await import("cloudflare:workers");
   const configured = env as unknown as { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
   const secrets = {
-    GOOGLE_CLIENT_ID: request.headers.get("x-gfes-internal-google-client-id") ?? configured.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: request.headers.get("x-gfes-internal-google-client-secret") ?? configured.GOOGLE_CLIENT_SECRET,
+    GOOGLE_CLIENT_ID: configured.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: configured.GOOGLE_CLIENT_SECRET,
   };
   if (!secrets.GOOGLE_CLIENT_ID || !secrets.GOOGLE_CLIENT_SECRET) return returnWithError(request, "Google 註冊服務尚未完成設定。", savedState.role);
 
@@ -98,6 +102,7 @@ export async function GET(request: Request) {
 
   let profileId = linked?.profile_id;
   let accountStatus = linked?.status;
+  let isNewConsumer = false;
   if (!profileId) {
     const emailAccount = await db.prepare(`SELECT ac.profile_id, p.role FROM account_controls ac
         JOIN profiles p ON p.id = ac.profile_id WHERE lower(ac.email) = ?`)
@@ -108,6 +113,7 @@ export async function GET(request: Request) {
         : "此電子信箱已使用其他角色註冊。", savedState.role);
     }
     profileId = `${savedState.role}-${crypto.randomUUID()}`;
+    isNewConsumer = savedState.role === "consumer";
     accountStatus = savedState.role === "consumer" ? "active" : "pending";
     const location = defaultLocation[savedState.role];
     const localPart = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 15);
@@ -124,6 +130,7 @@ export async function GET(request: Request) {
         (profile_id, email, username, account_kind, status, auth_provider, provider_subject, updated_at)
         VALUES (?, ?, ?, 'real', ?, 'google', ?, CURRENT_TIMESTAMP)`)
         .bind(profileId, email, username, accountStatus, subject),
+      ...(savedState.role === "consumer" ? [consumerWelcomeGrant(db, profileId)] : []),
     ]);
   }
 
@@ -143,7 +150,7 @@ export async function GET(request: Request) {
 
   const session = await createAuthSession(profileId, savedState.role);
   const portalPath = savedState.role === "consumer" ? "/" : `/${savedState.role}`;
-  const headers = new Headers({ Location: `${portalPath}?auth=google`, "Cache-Control": "no-store" });
+  const headers = new Headers({ Location: `${portalPath}?auth=google${isNewConsumer ? `&welcomePoints=${CONSUMER_WELCOME_POINTS}` : ""}`, "Cache-Control": "no-store" });
   headers.append("Set-Cookie", sessionCookie(session.token, request, savedState.role));
   headers.append("Set-Cookie", expiredOAuthStateCookie(request));
   return new Response(null, {

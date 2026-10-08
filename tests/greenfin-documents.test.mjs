@@ -41,6 +41,15 @@ test("validates file MIME type, size and magic bytes", async () => {
   await assert.rejects(() => inspectGreenFinFile(disguised), /檔案內容與格式不符/);
   const unsupported = new File(["demo"], "demo.txt", { type: "text/plain" });
   assert.match(validateGreenFinFile(unsupported), /僅支援/);
+  const webp = new File(["RIFF0000WEBP"], "proof.webp", { type: "image/webp" });
+  assert.match(validateGreenFinFile(webp), /不接受 WebP/);
+  const mismatched = new File(["%PDF-1.7"], "proof.png", { type: "application/pdf" });
+  assert.match(validateGreenFinFile(mismatched), /僅支援/);
+  const truncatedPng = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])], "proof.png", { type: "image/png" });
+  await assert.rejects(() => inspectGreenFinFile(truncatedPng), /檔案內容與格式不符/);
+  const heic = new File([new Uint8Array([0, 0, 0, 20, 102, 116, 121, 112, 104, 101, 105, 99, 0, 0, 0, 0, 104, 101, 105, 99])], "proof.heic", { type: "" });
+  assert.equal(validateGreenFinFile(heic), "");
+  assert.equal((await inspectGreenFinFile(heic)).contentType, "image/heic");
 });
 
 test("document route enforces GFES farmer sessions, CSRF and ownership", () => {
@@ -50,4 +59,7 @@ test("document route enforces GFES farmer sessions, CSRF and ownership", () => {
   assert.match(routeSource, /DOCUMENT_UPLOADED/);
   assert.match(routeSource, /OCR_COMPLETED/);
   assert.match(routeSource, /FIELD_CORRECTED/);
+  assert.match(routeSource, /DOCUMENT_REVIEWED/);
+  assert.match(routeSource, /institution-001/);
+  assert.match(routeSource, /download/);
 });

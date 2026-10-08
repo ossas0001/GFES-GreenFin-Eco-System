@@ -1,4 +1,4 @@
-import { getDb } from "./index";
+import { getRawDb } from "./index";
 import { createPasswordCredential } from "./credentials";
 import { ensureGreenFinSchema } from "./greenfin";
 import { loadGreenFinRuleEngine } from "../worker/greenfin/rules/engine";
@@ -1514,8 +1514,8 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
   const greenFinProgressStats = viewer?.role === "farmer"
     ? await queryOne<Record<string, number>>(db, `SELECT
         (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ?) AS document_count,
-        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('NORMALIZED', 'VERIFIED')) AS processed_document_count,
-        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status = 'VERIFIED') AS verified_document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('SUBMITTED', 'APPROVED', 'REJECTED', 'NORMALIZED', 'VERIFIED')) AS processed_document_count,
+        (SELECT COUNT(*) FROM greenfin_documents WHERE farmer_id = ? AND status IN ('APPROVED', 'VERIFIED')) AS verified_document_count,
         (SELECT COUNT(*) FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1) AS action_count,
         (SELECT COUNT(*) FROM greenfin_experience_transactions WHERE farmer_id = ? AND rule_version = ?) AS experience_transaction_count,
         (SELECT COUNT(DISTINCT indicator_type) FROM greenfin_indicator_results WHERE farmer_id = ? AND rule_version = ?) AS indicator_count,
@@ -1535,16 +1535,22 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     dataHealthCount: Number(greenFinProgressStats?.data_health_count ?? 0),
     unresolvedAnomalyCount: Number(greenFinProgressStats?.unresolved_anomaly_count ?? 0),
   });
-  const farmerStoryRow = await queryOne<Record<string, unknown>>(db, "SELECT fs.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id WHERE fs.farmer_id = ?", farmerId);
-  const farmerNewsRows = await queryAll<Record<string, unknown>>(db, "SELECT fn.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id WHERE fn.farmer_id = ? ORDER BY fn.updated_at DESC, fn.created_at DESC", farmerId);
-  const consumerNewsRows = await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district
+  const farmerStoryRow = viewer?.role === "farmer" || !viewer
+    ? await queryOne<Record<string, unknown>>(db, "SELECT fs.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id WHERE fs.farmer_id = ?", farmerId)
+    : null;
+  const farmerNewsRows = viewer?.role === "farmer" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT fn.*, p.display_name AS farmer_name, p.city, p.district FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id WHERE fn.farmer_id = ? ORDER BY fn.updated_at DESC, fn.created_at DESC", farmerId)
+    : [];
+  const consumerNewsRows = viewer?.role === "consumer" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district
     FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id
     WHERE fn.status = 'published' AND fn.farmer_id IN (
       SELECT product.farmer_id FROM orders consumer_order JOIN products product ON product.id = consumer_order.product_id WHERE consumer_order.consumer_id = ?
       UNION
       SELECT project.farmer_id FROM project_supports support JOIN projects project ON project.id = support.project_id WHERE support.consumer_id = ?
     )
-    ORDER BY fn.published_at DESC, fn.updated_at DESC LIMIT 20`, consumerId, consumerId);
+    ORDER BY fn.published_at DESC, fn.updated_at DESC LIMIT 20`, consumerId, consumerId)
+    : [];
   const evidenceRows = viewer?.role === "farmer"
     ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM evidence WHERE farmer_id = ? ORDER BY submitted_at DESC, id DESC", farmerId)
     : viewer?.role === "admin" || !viewer
@@ -1561,21 +1567,39 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM procurement_requests WHERE institution_id = ? ORDER BY created_at DESC, id DESC", institutionId)
     : [];
   const integrationRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM integration_settings ORDER BY service_key");
-  const verificationRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM verification_runs ORDER BY created_at DESC, id DESC LIMIT 30");
-  const adminAccountRows = await queryAll<Record<string, unknown>>(db, `SELECT p.id, p.role, p.display_name, p.city, p.district, p.created_at,
+  const verificationRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM verification_runs ORDER BY created_at DESC, id DESC LIMIT 30")
+    : [];
+  const adminAccountRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, `SELECT p.id, p.role, p.display_name, p.city, p.district, p.created_at,
     COALESCE(ac.email, p.id || '@gfes.tw') AS email,
     COALESCE(ac.username, '') AS username,
     COALESCE(ac.account_kind, 'test') AS account_kind,
     COALESCE(ac.status, 'active') AS account_status,
     COALESCE((SELECT SUM(pl.delta_points) FROM point_ledger pl WHERE pl.user_id = p.id), 0) AS point_balance
     FROM profiles p LEFT JOIN account_controls ac ON ac.profile_id = p.id
-    ORDER BY CASE p.role WHEN 'consumer' THEN 1 WHEN 'farmer' THEN 2 ELSE 3 END, p.created_at`);
-  const adminProductRows = await queryAll<Record<string, unknown>>(db, "SELECT p.id, p.title, p.points, p.stock, p.status, p.farmer_id, f.display_name AS farmer_name FROM products p JOIN profiles f ON f.id = p.farmer_id ORDER BY p.created_at DESC, p.id");
-  const adminProcurementRows = await queryAll<Record<string, unknown>>(db, "SELECT pr.*, p.display_name AS institution_name FROM procurement_requests pr JOIN profiles p ON p.id = pr.institution_id ORDER BY pr.created_at DESC, pr.id DESC");
-  const parameterRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM system_parameters ORDER BY parameter_key");
-  const auditRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM admin_audit_logs ORDER BY created_at DESC, id DESC LIMIT 60");
-  const dataTemplateRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM data_templates ORDER BY CASE target_role WHEN 'consumer' THEN 1 WHEN 'farmer' THEN 2 ELSE 3 END, display_name");
-  const actionSubmissionRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM action_submissions ORDER BY submitted_at DESC, id DESC");
+    ORDER BY CASE p.role WHEN 'consumer' THEN 1 WHEN 'farmer' THEN 2 ELSE 3 END, p.created_at`)
+    : [];
+  const adminProductRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT p.id, p.title, p.points, p.stock, p.status, p.farmer_id, f.display_name AS farmer_name FROM products p JOIN profiles f ON f.id = p.farmer_id ORDER BY p.created_at DESC, p.id")
+    : [];
+  const adminProcurementRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT pr.*, p.display_name AS institution_name FROM procurement_requests pr JOIN profiles p ON p.id = pr.institution_id ORDER BY pr.created_at DESC, pr.id DESC")
+    : [];
+  const parameterRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM system_parameters ORDER BY parameter_key")
+    : [];
+  const auditRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM admin_audit_logs ORDER BY created_at DESC, id DESC LIMIT 60")
+    : [];
+  const dataTemplateRows = viewer?.role === "admin" || !viewer
+    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM data_templates ORDER BY CASE target_role WHEN 'consumer' THEN 1 WHEN 'farmer' THEN 2 ELSE 3 END, display_name")
+    : [];
+  const actionSubmissionRows = viewer?.role === "consumer"
+    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM action_submissions WHERE consumer_id = ? ORDER BY submitted_at DESC, id DESC", consumerId)
+    : viewer?.role === "admin" || !viewer
+      ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM action_submissions ORDER BY submitted_at DESC, id DESC")
+      : [];
 
   const productToProject = (row: Record<string, unknown>) => ({
     id: row.id,
@@ -1734,11 +1758,11 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
 
 export async function getPublicPlatformContent(db: DbBinding) {
   const greenFinRuleEngine = await loadGreenFinRuleEngine(db);
-  const storyRows = await queryAll<Record<string, unknown>>(db, `SELECT fs.*, p.display_name AS farmer_name, p.city, p.district
-    FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id
+  const storyRows = await queryAll<Record<string, unknown>>(db, `SELECT fs.*, p.display_name AS farmer_name, p.city, p.district, COALESCE(ac.account_kind, 'test') AS account_kind
+    FROM farmer_stories fs JOIN profiles p ON p.id = fs.farmer_id LEFT JOIN account_controls ac ON ac.profile_id = p.id
     WHERE fs.status = 'published' ORDER BY fs.published_at DESC, fs.updated_at DESC LIMIT 12`);
-  const newsRows = await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district
-    FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id
+  const newsRows = await queryAll<Record<string, unknown>>(db, `SELECT fn.*, p.display_name AS farmer_name, p.city, p.district, COALESCE(ac.account_kind, 'test') AS account_kind
+    FROM farmer_news fn JOIN profiles p ON p.id = fn.farmer_id LEFT JOIN account_controls ac ON ac.profile_id = p.id
     WHERE fn.status = 'published' ORDER BY fn.published_at DESC, fn.updated_at DESC LIMIT 12`);
   const experienceRows = await queryAll<{ farmer_id: string; experience_total: number }>(db,
     "SELECT farmer_id, COALESCE(SUM(effective_value), 0) AS experience_total FROM greenfin_experience_transactions WHERE rule_version = ? GROUP BY farmer_id",
@@ -1755,6 +1779,7 @@ export async function getPublicPlatformContent(db: DbBinding) {
       farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
       headline: String(row.headline), summary: String(row.summary), body: String(row.body), quote: String(row.quote ?? ""),
       image: String(row.image_url ?? ""), imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status),
+      isDemo: row.account_kind === "test",
       updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
       ...publicGreenFin(row.farmer_id),
     })),
@@ -1762,6 +1787,7 @@ export async function getPublicPlatformContent(db: DbBinding) {
       id: String(row.id), farmerId: String(row.farmer_id), farmerName: String(row.farmer_name), city: String(row.city), district: String(row.district),
       title: String(row.title), content: String(row.content), category: String(row.category), image: String(row.image_url ?? ""),
       imageKey: row.image_key ? String(row.image_key) : "", status: String(row.status), createdAt: String(row.created_at),
+      isDemo: row.account_kind === "test",
       updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : "",
       ...publicGreenFin(row.farmer_id),
     })),
@@ -1769,7 +1795,7 @@ export async function getPublicPlatformContent(db: DbBinding) {
 }
 
 export async function getPlatformDb() {
-  const db = await getDb();
-  await ensurePlatformSchema(db.$client as unknown as DbBinding);
-  return db.$client as unknown as DbBinding;
+  const db = await getRawDb();
+  await ensurePlatformSchema(db);
+  return db;
 }

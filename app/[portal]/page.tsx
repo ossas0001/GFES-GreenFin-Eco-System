@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { GreenPlatformApp, type LoginRole } from "../GreenPlatformDemo";
 
 type BackendRole = Exclude<LoginRole, "consumer">;
@@ -22,5 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ portal: s
 export default async function PortalPage({ params }: { params: Promise<{ portal: string }> }) {
   const { portal } = await params;
   if (!isBackendRole(portal)) notFound();
-  return <GreenPlatformApp initialPortal={portal} />;
+  const cookieStore = await cookies();
+  const initialSessionExpected = cookieStore.has(`gfes_session_${portal}`) || cookieStore.has("gfes_session");
+  return <GreenPlatformApp initialPortal={portal} initialSessionExpected={initialSessionExpected} />;
 }

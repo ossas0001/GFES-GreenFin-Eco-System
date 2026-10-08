@@ -70,15 +70,22 @@ const secondSession = { role: "consumer", cookie: secondConsumer.cookie, csrf: s
 const firstSnapshot = await snapshot(firstSession);
 const secondSnapshot = await snapshot(secondSession);
 for (const data of [firstSnapshot, secondSnapshot]) {
-  assert.equal(data.consumer.points, 0);
+  assert.equal(data.consumer.points, 500);
   assert.deepEqual(data.orders, []);
-  assert.deepEqual(data.ledger, []);
+  assert.equal(data.ledger.length, 1);
+  assert.equal(data.ledger[0].deltaPoints, 500);
+  assert.equal(data.ledger[0].sourceType, "consumer_welcome");
   assert.deepEqual(data.supportedProjectIds, []);
   assert.deepEqual(data.redeemedProductIds, []);
   assert.deepEqual(data.actionSubmissions, []);
   assert.deepEqual(data.registeredActionIds, []);
 }
 assert.notEqual(firstSnapshot.consumer.id, secondSnapshot.consumer.id);
+const emailSession = await login("consumer", firstConsumer.email);
+const emailSnapshot = await snapshot(emailSession);
+assert.equal(emailSnapshot.consumer.id, firstSnapshot.consumer.id);
+assert.equal(emailSnapshot.consumer.points, 500);
+assert.equal(emailSnapshot.ledger.length, 1);
 
 const admin = await login("admin", "admin001", "13245678");
 const farmerAccount = await register("farmer", "isof");

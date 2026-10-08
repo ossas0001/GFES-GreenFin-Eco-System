@@ -182,7 +182,8 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /function ProgramModal/);
   assert.match(demo, /function ImprovementProjectModal/);
   assert.match(demo, /function RoleCycleExplorer/);
-  assert.match(demo, /cycle-direction-arrow-top-right[^>]*>↖/);
+  assert.match(demo, /className="cycle-mobile-support">支持專案與兌換/);
+  assert.doesNotMatch(demo, /cycle-direction-arrow-top-right/);
   assert.match(demo, /查看三方綠點循環/);
   assert.match(demo, /onMouseEnter=\{\(\) => setHoveredRole/);
   assert.match(demo, /function saveFarmerProject/);
@@ -196,7 +197,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /submittedFrom: "consumer"/);
   assert.match(demo, /送出資料：\$\{invoiceNumber\}/);
   assert.match(demo, /GFES_green_consumption_impact_summary_2026H1\.pdf/);
-  assert.match(demo, /下載正式版 PDF/);
+  assert.match(demo, /下載平台範例 PDF/);
   assert.match(demo, /setIncentivePlans/);
   assert.match(demo, /programs\.length/);
   assert.match(demo, /儲存商品變更/);
@@ -220,7 +221,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /查看正式繳交文件範例/);
   assert.match(demo, /不接受無關的一般照片/);
   assert.match(demo, /FarmerGreenFinPage/);
-  assert.match(demo, /選擇 PDF、圖片或 XLSX/);
+  assert.match(demo, /選擇 PDF、PNG、JPG 或 HEIC/);
   assert.match(demo, /上傳並執行 SIMULATED OCR/);
   assert.match(uploadRoute, /submissionType === "farmer_evidence"/);
   assert.match(uploadRoute, /farmer-evidence\//);
@@ -259,16 +260,14 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(css, /\.device-preview-mobile \.role-cycle-detail-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(css, /content: "\\7DA0\\9EDE\\6D41\\5411"/);
   assert.match(css, /\.cycle-link-support \{ left: 50%; bottom: 74px/);
-  assert.match(css, /\.cycle-direction-arrow \{ display: none; \}/);
+  assert.match(css, /\.cycle-mobile-support \{ order: 3; display: block/);
   assert.match(css, /content: "\\2193"/);
   assert.doesNotMatch(css, /content: "\?+/);
   assert.match(css, /\.receipt-more-button/);
-  assert.match(demo, /dashboard-device-preview/);
-  assert.match(demo, /dashboard-device-toggle/);
+  assert.doesNotMatch(demo, /dashboard-device-toggle/);
   assert.match(demo, /mobile-nav-institution/);
-  assert.match(css, /\.dashboard-shell \.mobile-nav-institution \{ grid-template-columns: repeat\(5/);
+  assert.match(css, /\.dashboard-shell \.mobile-nav-institution \{ grid-template-columns: repeat\(6/);
   assert.match(css, /\.dashboard-shell \.mobile-nav \{[^}]*background: linear-gradient\(145deg, #12382a, #08251b\)/);
-  assert.match(css, /\.dashboard-device-preview \.mobile-nav \{ position: fixed/);
   assert.match(demo, /mobile-card-table orders-table/);
   assert.match(css, /@container dashboard-shell \(max-width: 780px\)/);
   assert.match(css, /\.mobile-card-table td::before \{ content: none; \}/);
@@ -347,7 +346,8 @@ test("provides a root consumer portal and three locked backend URLs", async () =
   assert.match(demo, /專屬角色入口/);
   assert.match(demo, /這是\$\{loginRoles\[initialPortal\]\.label\}專用入口/);
   assert.match(googleRoute, /Location: `\$\{portalPath\}\?\$\{params\}`/);
-  assert.match(googleCallback, /Location: `\$\{portalPath\}\?auth=google`/);
+  assert.match(googleCallback, /Location: `\$\{portalPath\}\?auth=google\$\{isNewConsumer/);
+  assert.match(googleCallback, /welcomePoints=\$\{CONSUMER_WELCOME_POINTS\}/);
 });
 
 test("keeps Google users on isolated real accounts", async () => {
@@ -373,8 +373,8 @@ test("keeps Google users on isolated real accounts", async () => {
   assert.match(platformBackend, /您沒有權限更新其他機構的履約進度/);
   assert.match(platformRoute, /item\.institutionId === profileId/);
   assert.match(schema, /institutionId: text\("institution_id"\)/);
-  assert.match(demo, /正在載入您的專屬帳戶/);
-  assert.match(demo, /useState\(initialSessionExpected \|\| \(Boolean\(initialPortal\)/, "session restoration must gate the public home screen during refresh");
+  assert.match(demo, /登入中，正在準備你的帳戶/);
+  assert.match(demo, /useState\(initialSessionExpected\)/, "session restoration must gate the public home screen when a session cookie exists");
   assert.match(demo, /系統不會因此將您登出/, "temporary restore failures must not be presented as logout");
   assert.match(demo, /openRoleWorkspace\(session\.role, true\)/, "refresh must restore the signed-in role workspace and section");
   assert.match(demo, /const loaded = await refreshBackend\(session\.role\);[\s\S]{0,320}openRoleWorkspace\(session\.role, true\)/);

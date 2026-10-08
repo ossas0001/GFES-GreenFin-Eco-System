@@ -282,7 +282,8 @@ img { display: block; max-width: 100%; }
   .admin-mobile-nav button { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: rgb(255 255 255 / .62); border: 0; border-radius: 9px; background: transparent; font-size: 10px; font-weight: 900; }
   .admin-mobile-nav button.active { color: white; background: rgb(255 255 255 / .12); }
   .admin-mobile-nav svg { width: 18px; height: 18px; }
-  .admin-mobile-nav { grid-template-columns: repeat(7, 1fr); }
+  .admin-mobile-nav { display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .admin-mobile-nav button { flex: 0 0 59px; }
   .template-summary-head { display: grid; }
   .farmer-media-library > header { display: grid; }
   .farmer-media-summary { justify-content: flex-start; }
@@ -816,6 +817,18 @@ img { display: block; max-width: 100%; }
   cursor: pointer;
 }
 .profile-button svg { width: 16px; }
+.profile-menu { position: relative; flex: 0 0 auto; }
+.profile-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: min(260px, calc(100vw - 28px)); padding: 8px; border: 1px solid rgb(31 91 65 / .12); border-radius: 16px; background: white; box-shadow: 0 18px 38px rgb(18 58 44 / .18); }
+.profile-popover-account { padding: 9px 11px 12px; border-bottom: 1px solid rgb(31 91 65 / .1); overflow-wrap: anywhere; }
+.profile-popover-account strong, .profile-popover-account small { display: block; }
+.profile-popover-account strong { color: var(--forest-950); font-size: 14px; }
+.profile-popover-account small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.profile-popover button { width: 100%; min-height: 42px; margin-top: 5px; padding: 8px 10px; display: flex; align-items: center; gap: 9px; color: var(--forest-900); border: 0; border-radius: 10px; background: transparent; font-weight: 800; text-align: left; cursor: pointer; }
+.profile-popover button:hover, .profile-popover button:focus-visible { background: #edf4e8; }
+.profile-popover button svg { width: 17px; height: 17px; }
+@container dashboard-shell (max-width: 780px) {
+  .dashboard-shell .profile-popover { left: 0; right: auto; }
+}
 .avatar { width: 34px; height: 34px; display: grid; place-items: center; color: white; border-radius: 11px; background: var(--forest-700); }
 .dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
 .span-12 { grid-column: span 12; }
@@ -917,6 +930,8 @@ img { display: block; max-width: 100%; }
 .metric small { color: var(--forest-700); font-size: 14px; font-weight: 900; }
 .metric > strong { display: block; margin: 18px 0 4px; color: var(--forest-950); font-size: 27px; }
 .metric p { margin: 0; color: var(--muted); font-size: 15px; }
+.metric-detail { display: block; margin-top: 8px; color: var(--forest-700); font-size: 12px; font-weight: 700; line-height: 1.35; }
+.institution-mobile-budget-chart { display: none; }
 .score-panel { display: grid; grid-template-columns: 190px 1fr; gap: 26px; align-items: center; }
 .score-ring {
   width: 170px;
@@ -1315,10 +1330,69 @@ td svg { width: 17px; }
 .greenfin-verification-result { margin-top: 16px; padding: 14px; display: flex; gap: 11px; align-items: flex-start; color: #1d5d42; border-radius: 14px; background: #eaf5e7; }
 .greenfin-verification-result svg { width: 21px; flex: 0 0 auto; }
 .greenfin-verification-result p { margin: 4px 0 0; color: #4e6b5d; font-size: 12px; }
+.greenfin-verification-result.review-rejected { color: #844e25; background: #fff2df; }
+.greenfin-verification-result.review-rejected p { color: #765b42; }
+.greenfin-review-note { margin-top: 16px; display: grid; gap: 8px; color: var(--forest-900); font-weight: 800; }
+.greenfin-review-note textarea { width: 100%; padding: 12px; border: 1px solid #ccdacd; border-radius: 12px; background: white; font: inherit; resize: vertical; }
 .greenfin-anomaly-list { margin-top: 12px; display: grid; gap: 8px; }
 .greenfin-anomaly-list article { padding: 11px 13px; display: flex; justify-content: space-between; gap: 14px; color: #754c1f; border-radius: 12px; background: #fff4df; }
 .greenfin-anomaly-list span { color: #785f43; font-size: 12px; }
 .greenfin-document-actions { margin-top: 18px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.greenfin-demo-admin-section { display: grid; gap: 18px; }
+.greenfin-demo-admin-intro { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+.greenfin-demo-admin-intro h2 { margin: 10px 0 6px; color: var(--forest-950); }
+.greenfin-demo-admin-intro p { max-width: 65ch; color: var(--muted); }
+.greenfin-demo-admin-intro aside { min-width: 130px; display: grid; gap: 2px; color: var(--forest-900); text-align: right; }
+.greenfin-demo-admin-intro aside b { font-size: 34px; }
+.greenfin-demo-admin-intro aside small { color: var(--muted); }
+.greenfin-demo-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.greenfin-demo-pdf-card { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.greenfin-demo-pdf-card header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.greenfin-demo-pdf-card header small, .greenfin-demo-pdf-card p { color: var(--muted); }
+.greenfin-demo-pdf-card h2 { margin: 0; color: var(--forest-950); font-size: 20px; }
+.greenfin-demo-pdf-icon { width: 62px; height: 62px; display: grid; place-items: center; color: var(--leaf); border-radius: 16px; background: #edf5e9; }
+.greenfin-demo-pdf-icon svg { width: 25px; }
+.greenfin-demo-pdf-icon span { font-size: 11px; font-weight: 900; }
+.greenfin-demo-field-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.greenfin-demo-field-list span { padding: 6px 9px; display: inline-flex; align-items: center; gap: 4px; color: var(--forest-900); border-radius: 999px; background: #eff6eb; font-size: 12px; }
+.greenfin-demo-field-list svg { width: 14px; height: 14px; }
+.greenfin-demo-pdf-card footer { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+.greenfin-demo-boundary { display: flex; gap: 12px; align-items: flex-start; }
+.greenfin-demo-boundary > svg { width: 24px; flex: 0 0 auto; color: var(--leaf); }
+.greenfin-demo-boundary h3 { margin: 0 0 5px; }
+.greenfin-demo-boundary p { margin: 0; color: var(--muted); line-height: 1.6; }
+.role-experience-site { min-height: 100vh; background: linear-gradient(140deg, #f0f5ed, #fcfdf9); }
+.role-experience-topbar .nav { justify-content: space-between; }
+.role-experience-main { min-height: calc(100vh - 80px); display: grid; align-items: center; padding: 40px 0 72px; }
+.role-experience-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); align-items: center; gap: clamp(24px, 5vw, 80px); }
+.role-experience-copy, .role-experience-preview { min-width: 0; }
+.role-experience-copy .eyebrow { color: var(--leaf); font-weight: 900; }
+.role-experience-icon { width: 58px; height: 58px; margin: 18px 0; display: grid; place-items: center; color: var(--leaf); border-radius: 18px; background: #e4f0e0; }
+.role-experience-icon svg { width: 30px; height: 30px; }
+.role-experience-copy h1 { max-width: 16ch; margin: 0 0 18px; color: var(--forest-950); font-size: clamp(30px, 4vw, 54px); line-height: 1.2; }
+.role-experience-copy p { max-width: 58ch; color: var(--muted); line-height: 1.8; }
+.role-experience-copy > small { display: block; margin-top: 16px; color: var(--muted); }
+.role-experience-actions { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+.role-experience-preview { padding: 26px; border: 1px solid #dce9db; border-radius: 24px; background: white; box-shadow: 0 18px 50px rgb(21 65 43 / .08); }
+.role-experience-preview > header { display: flex; align-items: center; gap: 12px; }
+.role-experience-preview > header > span { width: 46px; height: 46px; display: grid; place-items: center; color: white; border-radius: 14px; background: var(--leaf); }
+.role-experience-preview h2 { margin: 2px 0 0; color: var(--forest-950); }
+.role-experience-preview small { color: var(--muted); }
+.role-experience-feature-list { margin: 24px 0; display: grid; gap: 12px; }
+.role-experience-feature-list article { padding: 13px; display: grid; grid-template-columns: 40px minmax(0, 1fr) 18px; gap: 10px; align-items: center; border-radius: 13px; background: #f4f8f1; }
+.role-experience-feature-list article > span { width: 40px; height: 40px; display: grid; place-items: center; color: var(--leaf); border-radius: 11px; background: white; }
+.role-experience-feature-list h3 { margin: 0 0 3px; color: var(--forest-950); font-size: 15px; }
+.role-experience-feature-list p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.role-experience-feature-list article > svg { width: 18px; color: var(--leaf); }
+.role-experience-boundary { padding: 13px; display: flex; gap: 10px; align-items: center; color: var(--forest-900); border-radius: 13px; background: #e8f3e5; }
+.role-experience-boundary span, .role-experience-boundary small { display: block; }
+@media (max-width: 760px) {
+  .role-experience-main { display: block; padding: 28px 0 60px; }
+  .role-experience-hero { grid-template-columns: 1fr; }
+  .role-experience-copy h1 { max-width: none; }
+  .role-experience-preview { padding: 18px; }
+  .role-experience-topbar .button { font-size: 12px; }
+}
 .greenfin-complete-label { display: inline-flex; align-items: center; gap: 6px; color: var(--leaf); font-size: 13px; font-weight: 900; }
 .greenfin-complete-label svg { width: 18px; }
 @media (max-width: 1050px) {
@@ -1326,6 +1400,9 @@ td svg { width: 17px; }
   .greenfin-stage-list { grid-column: 1 / -1; }
 }
 @media (max-width: 680px) {
+  .greenfin-demo-admin-grid { grid-template-columns: 1fr; }
+  .greenfin-demo-admin-intro { align-items: flex-start; flex-direction: column; }
+  .greenfin-demo-admin-intro aside { text-align: left; }
   .greenfin-workspace-summary, .greenfin-dimension-grid { grid-template-columns: 1fr; }
   .greenfin-stage-list { grid-column: auto; }
   .greenfin-level-card strong { font-size: 40px; }
@@ -2036,20 +2113,13 @@ td svg { width: 17px; }
 .role-cycle-stage { min-height: 575px; position: relative; max-width: 980px; margin: 0 auto; }
 .role-cycle-orbit { width: 390px; height: 390px; position: absolute; left: 50%; top: 50%; border: 2px dashed rgb(31 107 89 / .28); border-radius: 50%; transform: translate(-50%, -50%); }
 .role-cycle-orbit::before { content: ""; position: absolute; inset: -9px; border: 3px solid transparent; border-top-color: #5e9447; border-right-color: #1f6b59; border-radius: 50%; animation: role-cycle-spin-counterclockwise 12s linear infinite; }
-.role-cycle-orbit::after { content: "↺ 逆時鐘"; min-width: 92px; height: 34px; padding: 0 12px; position: absolute; right: -115px; top: 50%; display: grid; place-items: center; color: white; font-size: 14px; font-weight: 900; white-space: nowrap; border-radius: 999px; background: #1f6b59; box-shadow: 0 8px 22px rgb(31 107 89 / .22); transform: translateY(-50%); }
-.cycle-direction-arrow { width: 30px; height: 30px; position: absolute; z-index: 5; display: grid; place-items: center; color: white; font-size: 20px; font-weight: 900; line-height: 1; border: 3px solid #fbfcf8; border-radius: 50%; background: #2d7250; box-shadow: 0 7px 18px rgb(31 107 89 / .24); pointer-events: none; }
-.cycle-direction-arrow-top-right { right: 9%; top: 9%; }
-.cycle-direction-arrow-top-left { left: 9%; top: 9%; }
-.cycle-direction-arrow-bottom-left { left: 9%; bottom: 9%; }
-.cycle-direction-arrow-bottom-right { right: 9%; bottom: 9%; }
-.cycle-direction-arrow { display: none; }
-.role-cycle-orbit::after { display: none; }
 .cycle-core { width: 170px; height: 170px; position: absolute; left: 50%; top: 50%; z-index: 2; display: grid; place-items: center; align-content: center; text-align: center; color: white; border: 8px solid rgb(255 255 255 / .85); border-radius: 50%; background: linear-gradient(145deg, #173c4f, #1f6b59); box-shadow: 0 22px 55px rgb(23 60 79 / .2); transform: translate(-50%, -50%); transition: opacity .25s ease, filter .25s ease; }
 .cycle-core svg { width: 30px; margin-bottom: 8px; color: #d6ebad; }
 .cycle-core strong, .cycle-core small { display: block; }
 .cycle-core strong { font-size: 22px; }
 .cycle-core small { margin-top: 4px; color: rgb(255 255 255 / .65); font-size: 15px; }
 .cycle-link { position: absolute; z-index: 3; padding: 7px 11px; color: #1f6b59; font-size: 15px; font-weight: 900; border: 1px solid rgb(31 107 89 / .12); border-radius: 999px; background: rgb(255 255 255 / .92); box-shadow: 0 8px 22px rgb(31 91 65 / .08); transition: opacity .25s ease, filter .25s ease; }
+.cycle-mobile-support { display: none; }
 .cycle-link-grant { left: 20%; top: 34%; transform: rotate(-22deg); }
 .cycle-link-support { left: 50%; bottom: 74px; transform: translateX(-50%); }
 .cycle-link-impact { right: 18%; top: 34%; transform: rotate(22deg); }
@@ -2106,6 +2176,10 @@ td svg { width: 17px; }
   .role-cycle-stage { min-height: auto; display: grid; gap: 12px; }
   .role-cycle-orbit, .cycle-core, .cycle-link { display: none; }
   .role-cycle-node, .role-cycle-node-institution, .role-cycle-node-consumer, .role-cycle-node-farmer { width: 100%; min-height: 124px; position: relative; inset: auto; transform: none; }
+  .role-cycle-node-institution { order: 1; }
+  .role-cycle-node-consumer { order: 2; }
+  .role-cycle-node-farmer { order: 4; }
+  .cycle-mobile-support { order: 3; display: block; justify-self: center; padding: 7px 14px; color: #1f6b59; font-size: 15px; font-weight: 900; border: 1px solid rgb(31 107 89 / .12); border-radius: 999px; background: white; }
   .role-cycle-node-institution.active, .role-cycle-node-consumer.active, .role-cycle-node-farmer.active { transform: scale(1.025); }
   .role-cycle-node-institution.dimmed, .role-cycle-node.dimmed { transform: scale(.98); }
   .role-cycle-detail { margin-top: 14px; }
@@ -2216,6 +2290,20 @@ td svg { width: 17px; }
   box-shadow: inset 0 0 0 1px rgb(214 235 173 / .14);
 }
 
+@container dashboard-shell (max-width: 930px) {
+  .dashboard-shell .institution-budget-desktop { display: none; }
+  .dashboard-shell .institution-mobile-budget-chart { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; width: 100%; padding: 4px 2px 0; }
+  .dashboard-shell .institution-budget-column { min-width: 0; display: flex; flex-direction: column; align-items: stretch; text-align: center; }
+  .dashboard-shell .institution-budget-column > strong { min-height: 18px; color: var(--forest-900); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .dashboard-shell .institution-budget-bar-track { height: 160px; display: flex; align-items: flex-end; border-bottom: 1px solid rgb(31 91 65 / .22); }
+  .dashboard-shell .institution-budget-bar-track > span { display: block; width: 100%; border-radius: 7px 7px 0 0; background: linear-gradient(180deg, #3a8260, #236448); }
+  .dashboard-shell .institution-budget-column > small { display: block; width: 100%; min-height: 34px; margin-top: 6px; color: #53675d; font-size: 10px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+}
+
+@container dashboard-shell (min-width: 781px) and (max-width: 930px) {
+  .dashboard-shell .institution-dashboard-top .profile-button > span:not(.avatar) { display: none; }
+}
+
 @container dashboard-shell (max-width: 780px) {
   .dashboard-shell .dashboard { display: block; }
   .dashboard-shell .sidebar { display: none; }
@@ -2225,6 +2313,10 @@ td svg { width: 17px; }
   .dashboard-shell .dashboard-top h1 { font-size: 23px; line-height: 1.35; }
   .dashboard-shell .dashboard-top p { font-size: 14px; line-height: 1.6; }
   .dashboard-shell .dashboard-top-actions { width: 100%; justify-content: space-between; }
+  .dashboard-shell .institution-dashboard-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+  .dashboard-shell .institution-dashboard-top > div:first-child,
+  .dashboard-shell .institution-dashboard-top .dashboard-top-actions { width: auto; }
+  .dashboard-shell .institution-dashboard-top .dashboard-top-actions { justify-content: flex-end; }
   .dashboard-shell .profile-button { min-width: 46px; padding-right: 8px; }
   .dashboard-shell .profile-button > span:not(.avatar) { display: none; }
   .dashboard-shell .dashboard-grid { gap: 12px; }
@@ -2237,6 +2329,7 @@ td svg { width: 17px; }
   .dashboard-shell .metric { min-width: 0; padding: 14px; }
   .dashboard-shell .metric > strong { margin-top: 13px; font-size: 22px; overflow-wrap: anywhere; }
   .dashboard-shell .metric p { font-size: 13px; line-height: 1.4; }
+  .dashboard-shell .metric-detail { font-size: 11px; overflow-wrap: anywhere; }
   .dashboard-shell .panel { padding: 16px; border-radius: 18px; }
   .dashboard-shell .panel-head { margin-bottom: 16px; gap: 10px; }
   .dashboard-shell .panel-head > div:first-child { flex-basis: 100%; }
@@ -2349,7 +2442,7 @@ td svg { width: 17px; }
   .dashboard-shell .mobile-nav { inset: auto 12px 12px; padding: 7px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-shell .mobile-nav-consumer,
   .dashboard-shell .mobile-nav-farmer { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .dashboard-shell .mobile-nav-institution { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .dashboard-shell .mobile-nav-institution { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .dashboard-shell .mobile-nav button { min-height: 54px; padding: 3px; font-size: 11px; }
   .dashboard-shell .modal-backdrop { padding: 10px; }
   .dashboard-shell .modal { max-height: calc(100vh - 20px); border-radius: 20px; }
@@ -2418,6 +2511,10 @@ td svg { width: 17px; }
   .farmers-table td:nth-child(4)::before { content: "履歷完整度"; }
   .farmers-table td:nth-child(5)::before { content: "綠點支持"; }
   .farmers-table td:nth-child(6)::before { content: "地方效益"; }
+  .institution-summary-table td:nth-child(1)::before { content: "類型"; }
+  .institution-summary-table td:nth-child(2)::before { content: "名稱"; }
+  .institution-summary-table td:nth-child(3)::before { content: "預算／數量"; }
+  .institution-summary-table td:nth-child(4)::before { content: "狀態"; }
   .esg-table td:nth-child(1)::before,
   .report-table td:nth-child(1)::before { content: "成果面向"; }
   .esg-table td:nth-child(2)::before { content: "可揭露指標"; }

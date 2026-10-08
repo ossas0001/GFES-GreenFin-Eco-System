@@ -10,29 +10,46 @@ const actionRules: Record<string, { title: string; rewardPoints: number }> = {
 
 const farmerEvidenceTypes = new Set(["產銷履歷佐證", "無農藥檢測", "友善耕作紀錄", "低碳作業證明", "土壤檢測報告", "生態棲地紀錄"]);
 const allowedFileTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const actionProofTypesByExtension: Record<string, string> = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", heic: "image/heic" };
+function actionProofContentType(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const contentType = actionProofTypesByExtension[extension];
+  if (!contentType) return null;
+  const declaredType = file.type.toLowerCase();
+  const acceptedTypes = contentType === "image/heic" ? new Set(["", "application/octet-stream", "image/heic", "image/heif"]) : new Set(["", "application/octet-stream", contentType]);
+  return acceptedTypes.has(declaredType) ? contentType : null;
+}
 
-function validateFile(file: FormDataEntryValue | null) {
+function validateFile(file: FormDataEntryValue | null, proofUpload = false) {
   if (!(file instanceof File) || file.size === 0) return "請選擇要上傳的證明檔案";
   if (file.size > 10 * 1024 * 1024) return "檔案大小不可超過 10 MB";
-  if (!allowedFileTypes.has(file.type)) return "僅支援 PDF、JPG、PNG 或 WebP";
+  if (proofUpload ? !actionProofContentType(file) : !allowedFileTypes.has(file.type)) {
+    return proofUpload ? "僅支援 PDF、PNG、JPG、JPEG 或 HEIC" : "僅支援 PDF、JPG、PNG 或 WebP";
+  }
   if (file.name.length > 180) return "檔名不可超過 180 個字";
   return "";
 }
 
-async function inspectFile(file: File) {
+async function inspectFile(file: File, proofUpload = false) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const prefix = (start: number, end: number) => String.fromCharCode(...bytes.slice(start, end));
-  const valid = file.type === "application/pdf"
+  const contentType = proofUpload ? actionProofContentType(file) : file.type;
+  if (!contentType) throw new Error("僅支援 PDF、PNG、JPG、JPEG 或 HEIC");
+  const hasHeicBrand = bytes.length >= 16 && prefix(4, 8) === "ftyp" && ["heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs"].some((brand) => {
+    for (let offset = 8; offset + 4 <= Math.min(bytes.length, 64); offset += 4) if (prefix(offset, offset + 4) === brand) return true;
+    return false;
+  });
+  const valid = contentType === "application/pdf"
     ? bytes.length >= 5 && prefix(0, 5) === "%PDF-"
-    : file.type === "image/jpeg"
+    : contentType === "image/jpeg"
       ? bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
-      : file.type === "image/png"
-        ? bytes.length >= 8 && bytes[0] === 0x89 && prefix(1, 4) === "PNG"
-        : bytes.length >= 12 && prefix(0, 4) === "RIFF" && prefix(8, 12) === "WEBP";
+      : contentType === "image/png"
+        ? bytes.length >= 8 && bytes[0] === 0x89 && prefix(1, 8) === "PNG\r\n\x1a\n"
+        : contentType === "image/heic" ? hasHeicBrand : contentType === "image/webp" && bytes.length >= 12 && prefix(0, 4) === "RIFF" && prefix(8, 12) === "WEBP";
   if (!valid) throw new Error("檔案內容與格式不符，已拒絕上傳");
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return { bytes, sha256 };
+  return { bytes, sha256, contentType };
 }
 
 async function getUploadsBucket() {
@@ -46,13 +63,17 @@ export async function POST(request: Request) {
   try {
     const form = await request.formData();
     const submissionType = String(form.get("submissionType") ?? "consumer_action");
+    if (!new Set(["consumer_action", "farmer_evidence", "farmer_media"]).has(submissionType)) {
+      return Response.json({ error: "上傳用途不正確" }, { status: 400 });
+    }
     const farmerUpload = submissionType === "farmer_evidence" || submissionType === "farmer_media";
     const session = await requireAuth(request, farmerUpload ? ["farmer"] : ["consumer"], true);
     const fileValue = form.get("file");
-    const fileError = validateFile(fileValue);
+    const isProofUpload = submissionType === "consumer_action" || submissionType === "farmer_evidence";
+    const fileError = validateFile(fileValue, isProofUpload);
     if (fileError) return Response.json({ error: fileError }, { status: 400 });
     const file = fileValue as File;
-    const { bytes, sha256 } = await inspectFile(file);
+    const { bytes, sha256, contentType } = await inspectFile(file, isProofUpload);
     const db = await getPlatformDb();
 
     if (submissionType === "farmer_media") {
@@ -76,10 +97,10 @@ export async function POST(request: Request) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "farmer-evidence";
       const fileKey = `farmer-evidence/${session.profileId}/${uploadId}-${safeName}`;
       const uploads = await getUploadsBucket();
-      await uploads.put(fileKey, bytes, { httpMetadata: { contentType: file.type }, customMetadata: { farmerId: session.profileId, evidenceType, sha256 } });
+      await uploads.put(fileKey, bytes, { httpMetadata: { contentType }, customMetadata: { farmerId: session.profileId, evidenceType, sha256 } });
       try {
         const result = await db.prepare("INSERT INTO evidence (farmer_id, title, evidence_type, file_key, file_name, content_type, file_size) VALUES (?, ?, ?, ?, ?, ?, ?)")
-          .bind(session.profileId, title, evidenceType, fileKey, file.name, file.type, file.size).run();
+          .bind(session.profileId, title, evidenceType, fileKey, file.name, contentType, file.size).run();
         return Response.json({ ok: true, evidenceId: result.meta.last_row_id, status: "submitted", fileName: file.name });
       } catch (error) {
         await uploads.delete(fileKey);
@@ -100,10 +121,10 @@ export async function POST(request: Request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "evidence";
     const fileKey = `action-proofs/${submissionId}/${safeName}`;
     const uploads = await getUploadsBucket();
-    await uploads.put(fileKey, bytes, { httpMetadata: { contentType: file.type }, customMetadata: { submissionId, consumerId: session.profileId, actionType, sha256 } });
+    await uploads.put(fileKey, bytes, { httpMetadata: { contentType }, customMetadata: { submissionId, consumerId: session.profileId, actionType, sha256 } });
     try {
       await db.prepare("INSERT INTO action_submissions (id, consumer_id, action_type, title, note, reward_points, file_key, file_name, content_type, file_size, file_sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(submissionId, session.profileId, actionType, rule.title, note || `${rule.title}證明`, rule.rewardPoints, fileKey, file.name, file.type, file.size, sha256).run();
+        .bind(submissionId, session.profileId, actionType, rule.title, note || `${rule.title}證明`, rule.rewardPoints, fileKey, file.name, contentType, file.size, sha256).run();
     } catch (error) {
       await uploads.delete(fileKey);
       throw error;
@@ -120,8 +141,10 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const submissionId = params.get("submissionId") ?? "";
     const evidenceId = params.get("evidenceId") ?? "";
+    // Institution access to GreenFin documents is handled by the authorized GreenFin APIs.
+    if (evidenceId && session.role === "institution") return new Response("無權讀取此證明檔案", { status: 403 });
     const db = await getPlatformDb();
-    const unrestrictedEvidence = session.role === "admin" || session.role === "institution";
+    const unrestrictedEvidence = session.role === "admin";
     const submission = evidenceId
       ? await db.prepare(unrestrictedEvidence ? "SELECT file_key, file_name, content_type FROM evidence WHERE id = ?" : "SELECT file_key, file_name, content_type FROM evidence WHERE id = ? AND farmer_id = ?")
         .bind(...(unrestrictedEvidence ? [evidenceId] : [evidenceId, session.profileId])).first<{ file_key: string; file_name: string; content_type: string }>()
@@ -144,11 +167,11 @@ export async function PUT(request: Request) {
     const note = String(form.get("note") ?? "").trim();
     const fileValue = form.get("file");
     if (!submissionId) return Response.json({ error: "缺少行動證明編號" }, { status: 400 });
-    const fileError = validateFile(fileValue);
+    const fileError = validateFile(fileValue, true);
     if (fileError) return Response.json({ error: fileError }, { status: 400 });
     if (note.length > 1000) return Response.json({ error: "行動說明不可超過 1,000 個字" }, { status: 400 });
     const file = fileValue as File;
-    const { bytes, sha256 } = await inspectFile(file);
+    const { bytes, sha256, contentType } = await inspectFile(file, true);
 
     const db = await getPlatformDb();
     const existing = await db.prepare("SELECT file_key, status FROM action_submissions WHERE id = ? AND consumer_id = ?").bind(submissionId, session.profileId).first<{ file_key: string; status: string }>();
@@ -158,18 +181,22 @@ export async function PUT(request: Request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "formal-evidence.pdf";
     const fileKey = `action-proofs/${submissionId}/${crypto.randomUUID()}-${safeName}`;
     const uploads = await getUploadsBucket();
-    await uploads.put(fileKey, bytes, { httpMetadata: { contentType: file.type }, customMetadata: { submissionId, consumerId: session.profileId, replacement: "true", sha256 } });
+    await uploads.put(fileKey, bytes, { httpMetadata: { contentType }, customMetadata: { submissionId, consumerId: session.profileId, replacement: "true", sha256 } });
     try {
       const statement = note
-        ? db.prepare("UPDATE action_submissions SET file_key = ?, file_name = ?, content_type = ?, file_size = ?, file_sha256 = ?, note = ? WHERE id = ? AND consumer_id = ? AND status = 'pending'").bind(fileKey, file.name, file.type, file.size, sha256, note, submissionId, session.profileId)
-        : db.prepare("UPDATE action_submissions SET file_key = ?, file_name = ?, content_type = ?, file_size = ?, file_sha256 = ? WHERE id = ? AND consumer_id = ? AND status = 'pending'").bind(fileKey, file.name, file.type, file.size, sha256, submissionId, session.profileId);
-      await statement.run();
+        ? db.prepare("UPDATE action_submissions SET file_key = ?, file_name = ?, content_type = ?, file_size = ?, file_sha256 = ?, proof_viewed_at = NULL, note = ? WHERE id = ? AND consumer_id = ? AND status = 'pending' AND file_key = ?").bind(fileKey, file.name, contentType, file.size, sha256, note, submissionId, session.profileId, existing.file_key)
+        : db.prepare("UPDATE action_submissions SET file_key = ?, file_name = ?, content_type = ?, file_size = ?, file_sha256 = ?, proof_viewed_at = NULL WHERE id = ? AND consumer_id = ? AND status = 'pending' AND file_key = ?").bind(fileKey, file.name, contentType, file.size, sha256, submissionId, session.profileId, existing.file_key);
+      const result = await statement.run();
+      if (result.meta.changes !== 1) {
+        await uploads.delete(fileKey);
+        return Response.json({ error: "證明狀態已變更，請重新整理後再試" }, { status: 409 });
+      }
     } catch (error) {
       await uploads.delete(fileKey);
       throw error;
     }
-    await uploads.delete(existing.file_key);
-    return Response.json({ ok: true, submissionId, fileName: file.name, contentType: file.type });
+    await uploads.delete(existing.file_key).catch(() => undefined);
+    return Response.json({ ok: true, submissionId, fileName: file.name, contentType });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "替換證明檔案失敗" }, { status: error instanceof AuthError ? error.status : 400 });
   }

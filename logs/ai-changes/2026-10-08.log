@@ -1,0 +1,58 @@
+2026-10-08 — Login and consumer welcome points (local patch only)
+
+- Used the public repository main commit 6388d82 as the patch base. No deployment or production database write.
+- Kept platform schema initialization cached per D1 binding and used the raw binding directly for platform API access.
+- Scoped snapshot queries to the signed-in role and skipped public news loading on authenticated dashboard restores.
+- Added a visible sign-in progress state for Google redirect and session restoration.
+- Replaced the signed-in avatar's login action with an account menu and logout action; aligned the menu for mobile widths.
+- Added one idempotent 500-point welcome ledger entry inside the account creation batch for new consumer password and Google accounts.
+- Updated affected test expectations. Verification is recorded in logs/test-results/2026-10-08-auth-flow.md.
+
+Gate: local patch ready for review; production behavior and real Google authorization latency are not verified.
+
+2026-10-08 — 20-item handoff audit on merged GFES GreenFin (local patch only)
+
+- Compared the original GFES handoff list with merged-repository code and deployment identity; recorded results and limits in ../../outputs/GFES-20-item-audit.md.
+- Enforced proof file extension, declared MIME, magic bytes and size on the upload API, while preserving the separate farmer media and GreenFin document policies. Denied institution access to raw evidence through the generic upload route.
+- Deferred role login modal until user action, restricted Google OAuth to consumers on UI, start and callback, and removed request-header OAuth credential overrides.
+- Removed manual viewport switching and obsolete cycle arrows; placed the support label between the consumer and farmer nodes on mobile. Repaired the institution bar chart labels and clarified DEMO metrics and static PDF copy.
+- Marked public test-account stories and static impact numbers as DEMO/SIMULATED; updated README and deployment record.
+- Updated static tests and added a disposable-account local upload security check. Full repository tests pass 47/47, build and TypeScript pass, OAuth and upload security scripts pass. No production deploy or data write.
+
+Gate: local patch and audit report ready for review. Live Cloudflare bindings, actual Google OAuth and broad four-role end-to-end tests remain unverified.
+
+- Added an explicit local-only, idempotent institution DEMO fixture script. Ran it twice against local D1 and verified exactly three DEMO procurement rows and 2,400 kg simulated verified carbon in one row. No remote D1 write.
+
+2026-10-08 — Pre-push code review and verification
+
+- Reviewed the full local diff before pushing. Fixed the upload type fallback that accepted an unknown submission type through the consumer action path; the route now rejects unknown types.
+- Strengthened the PNG signature check and the pending-proof replacement update: it requires the original file key and pending status, clears the previous review marker, and leaves the saved replacement in place if old R2 cleanup fails.
+- Clarified that the institution report download is a fixed sample PDF even when the account has no report records.
+- Reran build, TypeScript, 47 repository tests, OAuth local security checks, upload create/replace/isolation checks, targeted ESLint, and git diff validation. All required checks passed; targeted ESLint had 0 errors and 24 pre-existing warnings in the large UI component.
+- GitHub push is to a review branch to avoid changing the production-linked main branch. No Cloudflare deployment or remote D1/R2 write.
+
+2026-10-08 — MERGE-18 live feature reconciliation before Worker release
+
+- Compared the active 2026-09-23 Worker bundle with the GitHub review branch because production contained later changes without a source branch.
+- Restored the government GreenFin document review workflow, admin DEMO PDF library and its two complete sample PDFs, public role previews, strict PDF/PNG/JPG/HEIC upload policy, and new-consumer welcome reward semantics and notice.
+- Added an explicit farmer submission step for newly uploaded OCR drafts, keeping unsent drafts hidden from the government account; preserved legacy submitted, approved and rejected documents and their progress totals.
+- Ran the 47 repository tests, TypeScript check, local review/resubmission/download integration test, responsive browser checks at 320/393/768/1024/1440 CSS pixels and a Wrangler deployment dry run. Results are in logs/test-results/2026-10-08-live-reconciliation.md.
+
+Gate: local reconciliation complete; GitHub push and production deployment pending.
+
+2026-10-08 — MERGE-18 reconciliation release
+
+- Published Worker version `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4` after confirming the expected previous version.
+- Verified public role pages, DEMO PDF assets, both user-provided test accounts, institution metrics and government review panel on the production Pages URL; checked the live 393 × 852 institution layout for horizontal overflow.
+- The GitHub review branch remains ahead locally while CLI authorization is renewed. No production D1 seed or migration was run.
+
+Gate: production smoke checks pass; GitHub synchronization pending.
+
+- GitHub CLI device authorization was prepared, but automatic approval review rejected assistant authorization because the existing CLI scope includes repository deletion and full private repository control. The owner has been asked to authorize directly if desired. The GitHub connector is read-only; no remote source update has occurred yet.
+
+2026-10-08 — GitHub synchronization completed
+
+- The owner completed GitHub CLI device and email verification directly. Pushed the reconciled release source and deployment notes to the existing draft PR #1 review branch.
+- Confirmed the GitHub PR head matched the local commit; updated the PR description to record the production release and test limits. GitHub reported no CI checks on the branch at that time.
+
+Gate: GitHub review branch synchronized; PR remains draft and unmerged.

@@ -120,6 +120,8 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 
 消費者、合作小農及銀行／政府／企業可從登入視窗建立唯一的使用者名稱與電子信箱，之後可使用其中任一項登入；帳號會寫入 D1 並依所選角色進入對應介面，平台管理員不開放自行註冊。消費者註冊後可直接使用；合作小農及銀行／政府／企業需等待管理員審核，審核畫面會提示約需 1～3 個工作天。
 
+新消費者以電子信箱註冊或首次使用 Google 登入時，帳本會原子性地記入一次 500 綠點歡迎獎勵；重複登入不會再次發放。Google 登入僅開放消費者，小農及機構使用帳號密碼。行動證明與永續證明僅接受 PDF、PNG、JPG、JPEG 或 HEIC，檔案大小上限 10 MB；農場故事圖片另可使用 WebP。
+
 Google 登入採 OAuth 2.0／OpenID Connect 授權碼流程、`state` 驗證與 PKCE，需設定 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_REDIRECT_URI`，並在 Google Cloud Console 登錄完全相同的 `https://gfes-green-consumption.pages.dev/api/auth/google/callback`。
 
 ## 2026-08-10 更新內容
@@ -193,3 +195,7 @@ npx tsc --noEmit
 npm run lint
 npm run test:security:local
 ```
+
+本地開發伺服器啟動後，可另跑 `node tests/google-oauth-security-local.mjs` 及 `node tests/checklist-upload-local.mjs`。後者會在本地 D1 建立一次性消費者帳號與待審核測試上傳，請勿指向正式站。
+
+機構測試帳號需要示範數字時，可在本地啟動並初始化 D1 後執行 `./scripts/seed-institution-demo-local.sh`。此指令固定使用 Wrangler `--local`，只對內建測試機構加入明確標示 DEMO／SIMULATED 的 3 筆採購與 2.4 噸模擬成果；可重複執行，不會自動套用到正式資料庫。
