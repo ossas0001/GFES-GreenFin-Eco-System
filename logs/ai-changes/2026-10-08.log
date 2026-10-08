@@ -49,3 +49,10 @@ Gate: local reconciliation complete; GitHub push and production deployment pendi
 Gate: production smoke checks pass; GitHub synchronization pending.
 
 - GitHub CLI device authorization was prepared, but automatic approval review rejected assistant authorization because the existing CLI scope includes repository deletion and full private repository control. The owner has been asked to authorize directly if desired. The GitHub connector is read-only; no remote source update has occurred yet.
+
+2026-10-08 — GitHub synchronization completed
+
+- The owner completed GitHub CLI device and email verification directly. Pushed the reconciled release source and deployment notes to the existing draft PR #1 review branch.
+- Confirmed the GitHub PR head matched the local commit; updated the PR description to record the production release and test limits. GitHub reported no CI checks on the branch at that time.
+
+Gate: GitHub review branch synchronized; PR remains draft and unmerged.

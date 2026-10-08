@@ -32,4 +32,4 @@ The Google provider consent flow and a fresh production email registration were 
 
 ## GitHub synchronization
 
-The release source and this record are committed locally. Git push lacks a local credential. The available GitHub connector has read-only repository access. A GitHub CLI device authorization page offered existing broad account scopes; automatic approval review rejected an assistant click because the scope includes deleting repositories and full control of private repositories. Push remains pending the owner's direct authorization or a narrower repository-scoped credential.
+The available GitHub connector had read-only repository access. GitHub CLI's existing broad account scopes included deleting repositories and full control of private repositories, so automatic approval review rejected an assistant click. The owner completed device authorization and email verification directly. The review branch was then pushed to PR #1, and its description was updated to match the published Worker and production checks. GitHub reported no CI checks on this branch at push time.
