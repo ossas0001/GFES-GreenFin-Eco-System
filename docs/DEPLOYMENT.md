@@ -2,7 +2,7 @@
 
 ## Current status
 
-This section records the deployment completed before the 2026-10-08 local audit. Later local patches, including the login, upload, responsive layout and demo-label changes, have not been deployed or verified against the production D1/R2 bindings.
+The 2026-10-08 release reconciles the GitHub review branch with the active MERGE-18 Worker, then deploys the merged Worker to the existing Pages service binding. The details below record the original integration deployment for historical reference; the current Worker version is listed in the release update at the end.
 
 - Public repository: `https://github.com/ossas0001/GFES-GreenFin-Eco-System`
 - Canonical production URL: `https://gfes-green-consumption.pages.dev`
@@ -40,3 +40,12 @@ Cloudflare references: [Pages advanced mode](https://developers.cloudflare.com/p
 - Optional custom-domain and DNS access only if a hostname other than the original Pages URL is desired.
 
 No further GitHub or Cloudflare credential is needed for the deployed Demo. Do not commit OAuth secrets; add them with Wrangler secret commands only when Google sign-in is enabled.
+
+## 2026-10-08 release update
+
+- Previous live Worker: MERGE-18 version `3d9e744b-222b-4e1e-a650-85a43485390d`. Its government GreenFin review and admin PDF sample library were restored in the local source before replacement.
+- Current Worker: `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4`, deployed from local commit `2428fd8a87049281840eff9bf9f2e49ac3fa71d4` plus prior branch commit `14c23b0`.
+- Pages proxy, D1 binding and R2 binding were unchanged. No remote D1 seed or migration was run for this release.
+- Production HTTP smoke checks: public root and all three role pages returned 200; both DEMO PDFs returned 200 with `application/pdf` and expected byte lengths; `farmer001` and `institution001` signed in and received their role-scoped platform and document lists.
+- Production browser check: institution overview showed 3 DEMO procurement rows and 2.4 tonnes of clearly labelled simulated carbon. GreenFin page displayed the government review panel with the existing approved document, and at 393 × 852 CSS pixels the page had no horizontal overflow.
+- Full Google consent timing and production email registration were not rerun in this release. Local OAuth, account isolation and registration checks are recorded under `logs/test-results/`.

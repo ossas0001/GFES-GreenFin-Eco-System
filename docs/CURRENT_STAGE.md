@@ -22,5 +22,6 @@
 | MERGE-10 | Public GitHub and isolated Cloudflare data deployment | PASS — original production URL deployed and verified |
 | MERGE-11 | Farmer GreenFin workspace progress and consumer-visible experience levels | PASS — deployed and verified on the original production URL |
 | MERGE-12 | LV1–LV4 public badges and actionable document completion／verification demo | PASS — deployed with DEMO data and verified on the original production URL |
+| MERGE-18 reconciliation | Preserve government review and admin PDF demo library while applying the merged audit patch | PASS — local gate and 2026-10-08 production smoke checks; Worker `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4` |
 
 MERGE-12 已完成消費者卡片的小農名稱後 LV1–LV4 徽章、GreenFin 待補件按鈕與完整文件處理畫面，以及明確標示的 DEMO／SIMULATED 待補件與已核驗資料。小農儀表板進度會在仍有待補件或未覆核異常時保持未完成。合併版本沿用原本的 Pages 正式網址，並由 Pages Service Binding 連到合併後端；D1 與 R2 使用新建且隔離的資源。正式網址：`https://gfes-green-consumption.pages.dev`。Google 登入仍需另行設定 OAuth Client ID／Secret；內建 Demo 帳號登入與 GreenFin 核心流程已驗證。

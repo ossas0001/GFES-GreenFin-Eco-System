@@ -39,3 +39,11 @@ Gate: local patch and audit report ready for review. Live Cloudflare bindings, a
 - Ran the 47 repository tests, TypeScript check, local review/resubmission/download integration test, responsive browser checks at 320/393/768/1024/1440 CSS pixels and a Wrangler deployment dry run. Results are in logs/test-results/2026-10-08-live-reconciliation.md.
 
 Gate: local reconciliation complete; GitHub push and production deployment pending.
+
+2026-10-08 — MERGE-18 reconciliation release
+
+- Published Worker version `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4` after confirming the expected previous version.
+- Verified public role pages, DEMO PDF assets, both user-provided test accounts, institution metrics and government review panel on the production Pages URL; checked the live 393 × 852 institution layout for horizontal overflow.
+- The GitHub review branch remains ahead locally while CLI authorization is renewed. No production D1 seed or migration was run.
+
+Gate: production smoke checks pass; GitHub synchronization pending.

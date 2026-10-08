@@ -19,4 +19,13 @@ New OCR drafts require explicit farmer submission before the government account 
 | Wrangler `deploy --dry-run` | Pass; 124 static assets, isolated D1/R2 bindings |
 | `git diff --check` | Pass |
 
-Production version check, deployment, smoke tests and release identity will be recorded below after publishing. Google consent time depends on the provider and was not measured by local tests.
+## Production release verification
+
+- Confirmed the active version immediately before deployment was the expected MERGE-18 version `3d9e744b-222b-4e1e-a650-85a43485390d`.
+- Deployed Worker version `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4`; no remote D1 migration or demo seed was needed.
+- Public root, farmer, institution and admin routes returned HTTP 200.
+- Both DEMO PDF URLs returned HTTP 200, `application/pdf`, and 142,721 / 147,604 bytes respectively.
+- `farmer001` and `institution001` sign-in returned HTTP 200; both could load their role-scoped platform and GreenFin document APIs.
+- In the production browser, the institution overview displayed three DEMO procurement rows and 2.4 tonnes of `SIMULATED` carbon. The GreenFin government review panel displayed one existing approved document. At 393 × 852 CSS pixels its `scrollWidth` was 378 px, within the 393 px viewport.
+
+The Google provider consent flow and a fresh production email registration were not rerun. They remain covered by local security and registration tests; provider latency was not measured.
