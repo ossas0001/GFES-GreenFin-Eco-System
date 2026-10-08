@@ -47,3 +47,5 @@ Gate: local reconciliation complete; GitHub push and production deployment pendi
 - The GitHub review branch remains ahead locally while CLI authorization is renewed. No production D1 seed or migration was run.
 
 Gate: production smoke checks pass; GitHub synchronization pending.
+
+- GitHub CLI device authorization was prepared, but automatic approval review rejected assistant authorization because the existing CLI scope includes repository deletion and full private repository control. The owner has been asked to authorize directly if desired. The GitHub connector is read-only; no remote source update has occurred yet.

@@ -29,3 +29,7 @@ New OCR drafts require explicit farmer submission before the government account 
 - In the production browser, the institution overview displayed three DEMO procurement rows and 2.4 tonnes of `SIMULATED` carbon. The GreenFin government review panel displayed one existing approved document. At 393 × 852 CSS pixels its `scrollWidth` was 378 px, within the 393 px viewport.
 
 The Google provider consent flow and a fresh production email registration were not rerun. They remain covered by local security and registration tests; provider latency was not measured.
+
+## GitHub synchronization
+
+The release source and this record are committed locally. Git push lacks a local credential. The available GitHub connector has read-only repository access. A GitHub CLI device authorization page offered existing broad account scopes; automatic approval review rejected an assistant click because the scope includes deleting repositories and full control of private repositories. Push remains pending the owner's direct authorization or a narrower repository-scoped credential.
