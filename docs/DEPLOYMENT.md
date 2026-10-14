@@ -49,3 +49,12 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 - Production HTTP smoke checks: public root and all three role pages returned 200; both DEMO PDFs returned 200 with `application/pdf` and expected byte lengths; `farmer001` and `institution001` signed in and received their role-scoped platform and document lists.
 - Production browser check: institution overview showed 3 DEMO procurement rows and 2.4 tonnes of clearly labelled simulated carbon. GreenFin page displayed the government review panel with the existing approved document, and at 393 × 852 CSS pixels the page had no horizontal overflow.
 - Full Google consent timing and production email registration were not rerun in this release. Local OAuth, account isolation and registration checks are recorded under `logs/test-results/`.
+
+## 2026-10-15 release update
+
+- Previous live Worker: `fb5136ee-d22d-46da-b8e6-0d6c02da3ae4` (rollback target).
+- Current Worker: `59f8380b-0a36-47a8-956c-446e9af9d9cd`, deployed from branch `fix/qa-review-greenfin-mobile` (PR #2) before merge.
+- Pages proxy, D1 binding and R2 binding were unchanged. No remote D1 migration or seed was run.
+- Production HTTP smoke checks: root and all three role pages returned 200 with non-duplicated titles; `/api/public` 200; unauthenticated `/api/platform` 401; sample PDF 200; new stylesheet contains the GreenFin sub-navigation and scroll-hint rules; `X-Frame-Options`, `frame-ancestors 'self'`, `nosniff` and HSTS headers present.
+- Production browser check: public home page at 375 × 812 CSS pixels had no horizontal overflow or broken images.
+- Signed-in production flows were not exercised by the automated agent; the four demo accounts should be checked by the owner.

@@ -12,3 +12,5 @@
 - Not changed by request: outcome reports remain routed to institution-001; admin order-change review for non-demo farmers unchanged.
 
 Gate: verified locally; see logs/test-results/2026-10-15-qa-review-fixes.txt.
+
+- Deployed Worker 59f8380b-0a36-47a8-956c-446e9af9d9cd to production from PR #2 (previous fb5136ee). No remote D1 migration. Public production smoke checks recorded in docs/DEPLOYMENT.md; signed-in production flows not verified by the agent.
