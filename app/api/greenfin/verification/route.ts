@@ -28,8 +28,9 @@ export async function POST(request: Request) {
     const declaredSourceLevel = String(document.source_level);
     if (!isGreenFinDataDomain(domain) || !isGreenFinSourceLevel(declaredSourceLevel)) return Response.json({ error: "GreenFin 文件欄位無效" }, { status: 500 });
     const data = JSON.parse(String(record.data_json || "{}")) as Record<string, string>;
-    const fieldsResult = await db.prepare("SELECT field_name, confidence FROM greenfin_document_fields WHERE document_id = ?").bind(documentId).all<{ field_name: string; confidence: number | null }>();
-    const fields = fieldsResult.results ?? [];
+    const fieldsResult = await db.prepare("SELECT field_name, confidence, manually_corrected FROM greenfin_document_fields WHERE document_id = ?").bind(documentId).all<{ field_name: string; confidence: number | null; manually_corrected: number }>();
+    // A field the farmer confirmed or corrected by hand no longer depends on OCR confidence.
+    const fields = (fieldsResult.results ?? []).map((field) => field.manually_corrected ? { ...field, confidence: null } : field);
     const verification = verifyGreenFinRecord({
       documentExists: true,
       declaredSourceLevel,

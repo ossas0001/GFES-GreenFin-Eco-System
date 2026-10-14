@@ -4,12 +4,12 @@ export type GreenFinExperienceLevel = "L0" | "L1" | "L2" | "L3" | "L4" | "L5";
 export type GreenFinPublicLevel = "LV1" | "LV2" | "LV3" | "LV4";
 
 export const GREENFIN_LEVEL_LABELS: Record<GreenFinExperienceLevel, string> = {
-  L0: "尚未開始",
-  L1: "綠色起步",
-  L2: "穩定累積",
-  L3: "多元實踐",
-  L4: "成熟治理",
-  L5: "示範領航",
+  L0: "尚未建立",
+  L1: "萌芽",
+  L2: "成長",
+  L3: "穩健",
+  L4: "領航",
+  L5: "示範",
 };
 
 export type GreenFinProgressInput = {

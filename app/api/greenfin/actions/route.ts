@@ -9,8 +9,14 @@ export async function GET(request: Request) {
   try {
     const session = await requireAuth(request, ["farmer"]);
     const db = await getPlatformDb(); await ensurePlatformSchema(db);
-    const result = await db.prepare("SELECT * FROM greenfin_actions WHERE farmer_id = ? ORDER BY action_date DESC, created_at DESC").bind(session.profileId).all();
-    return Response.json({ actions: result.results ?? [] });
+    const [result, evidence] = await Promise.all([
+      db.prepare("SELECT * FROM greenfin_actions WHERE farmer_id = ? ORDER BY action_date DESC, created_at DESC").bind(session.profileId).all(),
+      db.prepare(`SELECT record.id, record.domain, record.source_level, document.original_name
+        FROM greenfin_standardized_records record JOIN greenfin_documents document ON document.id = record.document_id
+        WHERE record.farmer_id = ? AND record.is_valid = 1 AND record.source_level != 'V0' AND document.status = 'VERIFIED'
+        ORDER BY record.created_at DESC`).bind(session.profileId).all(),
+    ]);
+    return Response.json({ actions: result.results ?? [], evidenceRecords: evidence.results ?? [] });
   } catch (error) { return errorResponse(error, "讀取綠色行動失敗"); }
 }
 
@@ -22,12 +28,15 @@ export async function POST(request: Request) {
     const description = String(body.description ?? "").trim(); const actionDate = String(body.actionDate ?? "");
     const evidenceRecordIds = [...new Set((body.evidenceRecordIds ?? []).map(String))];
     if (!dimensions.has(dimension) || !levels.has(actionLevel)) return Response.json({ error: "綠色行動構面或等級無效" }, { status: 400 });
+    if (!evidenceRecordIds.length) return Response.json({ error: "請至少選擇一份已核驗的佐證文件；沒有佐證的行動不認列經驗值" }, { status: 400 });
     if (!description || description.length > 500) return Response.json({ error: "行動說明須為 1 至 500 字" }, { status: 400 });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(actionDate) || new Date(`${actionDate}T00:00:00Z`).valueOf() > Date.now()) return Response.json({ error: "行動日期無效或不可晚於今天" }, { status: 400 });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(actionDate) || new Date(`${actionDate}T00:00:00+08:00`).valueOf() > Date.now()) return Response.json({ error: "行動日期無效或不可晚於今天" }, { status: 400 });
     const db = await getPlatformDb(); await ensurePlatformSchema(db);
     for (const recordId of evidenceRecordIds) {
-      const owned = await db.prepare("SELECT id FROM greenfin_standardized_records WHERE id = ? AND farmer_id = ?").bind(recordId, session.profileId).first();
+      const owned = await db.prepare(`SELECT record.is_valid, record.source_level, document.status FROM greenfin_standardized_records record
+        JOIN greenfin_documents document ON document.id = record.document_id WHERE record.id = ? AND record.farmer_id = ?`).bind(recordId, session.profileId).first<{ is_valid: number; source_level: string; status: string }>();
       if (!owned) return Response.json({ error: `佐證紀錄不屬於目前小農：${recordId}` }, { status: 403 });
+      if (!owned.is_valid || owned.source_level === "V0" || owned.status !== "VERIFIED") return Response.json({ error: "佐證文件須先完成來源核驗且不可為 V0" }, { status: 400 });
     }
     const actionId = `GFACTION-${crypto.randomUUID()}`;
     await db.prepare(`INSERT INTO greenfin_actions (id, farmer_id, dimension, action_level, description, action_date, evidence_record_ids_json)

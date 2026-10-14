@@ -157,9 +157,11 @@ const duplicateReward = await Promise.all([
 ]);
 assert.equal(duplicateReward.filter((item) => item.response.status === 200).length, 1, "only one duplicate verification should create a reward");
 assert.equal(duplicateReward.filter((item) => item.response.status === 400).length, 1, "concurrent duplicate verification must be rejected atomically");
+const pendingInvoice = duplicateReward.find((item) => item.response.status === 200);
+assert.equal(pendingInvoice.data.pendingReview, true, "consumer invoices must wait for admin review instead of granting points");
 
 await action(admin, "admin_update_product", { productId: testProductId, points: consumerBefore, stock: 1, status: "hidden" });
-await action(admin, "admin_update_account", { profileId: "consumer-001", displayName: "林子晴", username: "consumer001", email: "consumer@gfes.tw", city: "台北市", district: "大安區", status: "active", pointAdjustment: consumerBefore - 120, reason: "安全測試後恢復原始綠點" });
+await action(admin, "admin_update_account", { profileId: "consumer-001", displayName: "林子晴", username: "consumer001", email: "consumer@gfes.tw", city: "台北市", district: "大安區", status: "active", pointAdjustment: consumerBefore, reason: "安全測試後恢復原始綠點" });
 await action(admin, "admin_update_account", { profileId: "farmer-001", displayName: "禾日友善農園", username: "farmer001", email: "farmer@gfes.tw", city: "雲林縣", district: "斗六市", status: "active", pointAdjustment: -consumerBefore, reason: "安全測試後恢復原始綠點" });
 
 const finalSnapshotResponse = await fetch(`${baseUrl}/api/platform`, { headers: { cookie: admin.cookie } });

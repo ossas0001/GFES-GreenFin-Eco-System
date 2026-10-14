@@ -38,10 +38,13 @@ export async function POST(request: Request) {
     const indicators = calculateIndicatorResults(engine, inputs.records, inputs.anomalies, experience, inputs.documentCount);
     const dataHealth = calculateDataHealthResults(engine, inputs.records, inputs.anomalies);
     const calculatedAt = new Date().toISOString();
-    const statements = experience.transactions.map((transaction) => db.prepare(`INSERT INTO greenfin_experience_transactions
+    // Drop experience left behind by actions that were deactivated since the last run.
+    const statements = [db.prepare(`DELETE FROM greenfin_experience_transactions WHERE farmer_id = ? AND rule_version = ?
+      AND green_action_id NOT IN (SELECT id FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1)`).bind(farmerId, engine.version, farmerId)];
+    statements.push(...experience.transactions.map((transaction) => db.prepare(`INSERT INTO greenfin_experience_transactions
       (id, farmer_id, green_action_id, dimension, base_value, source_recognition_ratio, effective_value, rule_version, calculated_at, input_evidence_ids_json, calculation_trace_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(green_action_id, rule_version) DO UPDATE SET effective_value=excluded.effective_value, calculated_at=excluded.calculated_at, input_evidence_ids_json=excluded.input_evidence_ids_json, calculation_trace_json=excluded.calculation_trace_json`)
-      .bind(`GFX-${crypto.randomUUID()}`, farmerId, transaction.actionId, transaction.dimension, transaction.baseValue, transaction.sourceRecognitionRatio, transaction.effectiveValue, engine.version, calculatedAt, JSON.stringify(transaction.evidenceIds), JSON.stringify(transaction.trace.calculationTrace)));
+      .bind(`GFX-${crypto.randomUUID()}`, farmerId, transaction.actionId, transaction.dimension, transaction.baseValue, transaction.sourceRecognitionRatio, transaction.effectiveValue, engine.version, calculatedAt, JSON.stringify(transaction.evidenceIds), JSON.stringify(transaction.trace.calculationTrace))));
     statements.push(...indicators.map((result) => db.prepare(`INSERT INTO greenfin_indicator_results
       (id, farmer_id, indicator_type, score, level, details_json, rule_version, calculated_at, input_evidence_ids_json, calculation_trace_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(`GFI-${crypto.randomUUID()}`, farmerId, result.type, result.score, result.level, JSON.stringify(result.details), engine.version, calculatedAt, JSON.stringify(result.trace.inputEvidenceIds), JSON.stringify(result.trace.calculationTrace))));
