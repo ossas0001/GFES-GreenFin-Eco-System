@@ -20,6 +20,21 @@ test("calculates experience using base value, source ratio and caps", () => {
   assert.ok(result.transactions.some((transaction) => transaction.trace.calculationTrace.capped === true));
 });
 
+test("does not recognise experience for actions without evidence", () => {
+  const actions = Array.from({ length: 5 }, (_, index) => ({ id: `n${index}`, dimension: "減量", actionLevel: "CERTIFIED", evidenceRecordIds: [], actionDate: "2026-10-01" }));
+  const result = calculateExperienceResults(engine, actions, []);
+  assert.equal(result.total, 0);
+  assert.ok(result.transactions.every((transaction) => transaction.sourceLevel === "V0" && transaction.trace.calculationTrace.reason === "NO_EVIDENCE"));
+});
+
+test("applies the dimension limit per calendar year of the action", () => {
+  const records = [record("r1", "GREEN_ACTION", { 活動名稱: "測試", 執行日期: "2025-01-01" }, "V2")];
+  const action = (id, actionDate) => ({ id, dimension: "增匯", actionLevel: "CERTIFIED", evidenceRecordIds: ["r1"], actionDate });
+  const actions = [...[1, 2, 3].map((day) => action(`y25-${day}`, `2025-03-0${day}`)), ...[1, 2, 3].map((day) => action(`y26-${day}`, `2026-03-0${day}`))];
+  const result = calculateExperienceResults(engine, actions, records);
+  assert.equal(result.dimensions["增匯"], 500);
+});
+
 test("returns four independent indicators with traceable inputs", () => {
   const records = [
     record("identity", "IDENTITY", { 姓名: "DEMO", 身分證字號: "DEMO" }, "V3"),

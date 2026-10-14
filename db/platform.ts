@@ -678,29 +678,29 @@ async function seedPlatform(db: DbBinding) {
     db.prepare("INSERT OR IGNORE INTO system_parameters (parameter_key, display_name, value, unit, description) VALUES ('minimum_support_points', '專案最低支持點數', '100', '綠點', '消費者單次支持改善專案的最低點數')"),
     db.prepare("INSERT OR IGNORE INTO system_parameters (parameter_key, display_name, value, unit, description) VALUES ('platform_fee_percent', '平台維運比例', '3', '%', '用於平台維運與成果查核的比例')"),
     db.prepare("INSERT OR IGNORE INTO system_parameters (parameter_key, display_name, value, unit, description) VALUES ('low_stock_threshold', '低庫存警示門檻', '10', '件', '商品庫存低於此數值時顯示警示')"),
-    db.prepare("INSERT OR IGNORE INTO resource_redemptions (id, farmer_id, offer_id, resource_name, points, cooperative, contact_name, contact_phone, fulfillment_type, delivery_address, note, stage, status, tracking_number, created_at, updated_at) VALUES ('GFES-RES-20260725-001', ?, 'harvest-crates', '循環收成籃 10 入組', 600, '雲林縣斗六市農會', '林禾日', '0912-345-678', 'delivery', '雲林縣斗六市禾日友善農園（產地收貨區）', '用於葉菜採收與合作通路循環配送。', 2, 'shipping', 'COOP-26072835', '2026-07-25 10:20:00', '2026-07-28 14:30:00')").bind(FARMER_ID),
-    db.prepare("INSERT OR IGNORE INTO resource_redemptions (id, farmer_id, offer_id, resource_name, points, cooperative, contact_name, contact_phone, fulfillment_type, appointment_date, appointment_slot, note, stage, status, created_at, updated_at) VALUES ('GFES-RES-20260801-002', ?, 'soil-test', '土壤健康檢測補助', 450, '雲林縣斗六市農會', '林禾日', '0912-345-678', 'appointment', '2026-08-18', '上午 09:00–12:00', '本季土壤採樣與施肥建議。', 1, 'confirmed', '2026-08-01 09:10:00', '2026-08-02 11:40:00')").bind(FARMER_ID),
-    db.prepare("INSERT OR IGNORE INTO evidence (id, farmer_id, title, evidence_type, file_key, file_name, content_type, file_size, status, submitted_at, verified_at) VALUES (900001, ?, '產銷履歷與批次資訊', '產銷履歷佐證', 'sample-documents/GFES_農產履歷批次資料_完整範例.pdf', 'GFES_農產履歷批次資料_完整範例.pdf', 'application/pdf', 118420, 'verified', '2026-07-22 09:30:00', '2026-07-22 14:10:00')").bind(FARMER_ID),
-    db.prepare("INSERT OR IGNORE INTO evidence (id, farmer_id, title, evidence_type, file_key, file_name, content_type, file_size, status, submitted_at, verified_at) VALUES (900002, ?, '無農藥殘留檢測', '無農藥檢測', 'sample-documents/GFES_無農藥檢測報告_完整範例.pdf', 'GFES_無農藥檢測報告_完整範例.pdf', 'application/pdf', 121760, 'verified', '2026-07-18 10:20:00', '2026-07-18 16:45:00')").bind(FARMER_ID),
-    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES (?, ?, ?, ?, ?, ?, 'published', ?)").bind(FARMER_ID, "把友善耕作變成每天都看得見的選擇", "禾日友善農園用減藥、節水與田間紀錄，讓每箱蔬菜都有清楚的產地故事。", "我們從土壤開始改善，記錄每次灌溉、施肥與巡田，也讓消費者知道手上的綠點如何支持設備與耕作調整。\n每一次訂購與支持，都是農園持續投入友善生產的重要力量。", "照顧土地，是希望下一季還能種出安心的菜。", "/farmer-library/heri-leafy/cultivation-1.webp", "2026-08-09 08:30:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-002', ?, ?, ?, ?, ?, 'published', ?)").bind("一碗米背後，是一整季的田間選擇", "青谷稻作以節水栽培與生態田埂，兼顧稻米品質與田區生物多樣性。", "我們保留田埂植被、減少不必要用藥，並記錄每一批稻米的耕作與收穫日期。\n消費者的支持讓友善稻作不只被看見，也能持續做下去。", "讓稻田不只生產稻米，也成為許多生命的家。", "/farmer-library/qinggu-rice/cultivation-1.webp", "2026-08-08 14:00:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-003', ?, ?, ?, ?, ?, 'published', ?)").bind("讓鮮果在更低碳的方式裡抵達你手中", "山里果園改善採後保鮮與冷藏設備，降低耗能與水果損耗。", "果實採收後的保鮮，是品質也是能源議題。我們逐步導入節能冷藏與太陽能設備，並公開使用成果。", "減少一箱損耗，就多留下一份農村的收入。", "/farmer-library/shanli-pomelo/cultivation-1.webp", "2026-08-07 10:20:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-004', ?, ?, ?, ?, ?, 'published', ?)").bind("從一只循環箱開始減少產地包材", "暖田蔬果把循環周轉箱導入採收與配送流程，減少一次性紙箱與塑膠。", "從採收到配送，我們和合作通路一起建立周轉箱回收與清洗流程，讓包材能重複使用。", "每只箱子多用一次，土地就少一份負擔。", "/farmer-library/nuantian-tomato/cultivation-1.webp", "2026-08-06 16:40:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-HERI-001', ?, ?, ?, ?, ?, 'published', ?)").bind(FARMER_ID, "本週友善葉菜箱開始採收", "小白菜、青江菜與地瓜葉已進入採收期，本週訂單將依成熟度分批出貨，謝謝大家支持產地。", "採收與出貨", "/farmer-library/heri-leafy/product.webp", "2026-08-10 08:30:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-QINGGU-001', 'farmer-002', ?, ?, ?, ?, 'published', ?)").bind("友善稻田生態復育進入第二階段", "新的蜜源植物已完成栽植，近期將持續記錄昆蟲與鳥類出現情形，成果會同步回報給支持者。", "改善專案進度", "/farmer-library/qinggu-rice/cultivation-2.webp", "2026-08-09 15:10:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-SHANLI-001', 'farmer-003', ?, ?, ?, ?, 'published', ?)").bind("文旦採收與低碳冷藏排程公告", "今年文旦預計月底開始採收，支持者將優先收到批次與配送通知，果園也會公開冷藏耗能改善紀錄。", "產地公告", "/farmer-library/shanli-pomelo/product.webp", "2026-08-08 11:45:00"),
-    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-NUANTIAN-001', 'farmer-004', ?, ?, ?, ?, 'published', ?)").bind("循環周轉箱回收點新增一處", "彰化合作通路新增周轉箱回收點，購買暖田蔬果商品的消費者可於下次配送時一併歸還。", "循環包材", "/farmer-library/nuantian-tomato/product.webp", "2026-08-07 09:20:00"),
+    db.prepare("INSERT OR IGNORE INTO resource_redemptions (id, farmer_id, offer_id, resource_name, points, cooperative, contact_name, contact_phone, fulfillment_type, delivery_address, note, stage, status, tracking_number, created_at, updated_at) VALUES ('GFES-RES-20260725-001', ?, 'harvest-crates', '循環收成籃 10 入組', 600, '雲林縣斗六市農會', '林禾日', '0912-345-678', 'delivery', '雲林縣斗六市禾日友善農園（產地收貨區）', '用於葉菜採收與合作通路循環配送。', 2, 'shipping', 'COOP-26072835', '2026-07-25 02:20:00', '2026-07-28 06:30:00')").bind(FARMER_ID),
+    db.prepare("INSERT OR IGNORE INTO resource_redemptions (id, farmer_id, offer_id, resource_name, points, cooperative, contact_name, contact_phone, fulfillment_type, appointment_date, appointment_slot, note, stage, status, created_at, updated_at) VALUES ('GFES-RES-20260801-002', ?, 'soil-test', '土壤健康檢測補助', 450, '雲林縣斗六市農會', '林禾日', '0912-345-678', 'appointment', '2026-08-18', '上午 09:00–12:00', '本季土壤採樣與施肥建議。', 1, 'confirmed', '2026-08-01 01:10:00', '2026-08-02 03:40:00')").bind(FARMER_ID),
+    db.prepare("INSERT OR IGNORE INTO evidence (id, farmer_id, title, evidence_type, file_key, file_name, content_type, file_size, status, submitted_at, verified_at) VALUES (900001, ?, '產銷履歷與批次資訊', '產銷履歷佐證', 'sample-documents/GFES_農產履歷批次資料_完整範例.pdf', 'GFES_農產履歷批次資料_完整範例.pdf', 'application/pdf', 118420, 'verified', '2026-07-22 01:30:00', '2026-07-22 06:10:00')").bind(FARMER_ID),
+    db.prepare("INSERT OR IGNORE INTO evidence (id, farmer_id, title, evidence_type, file_key, file_name, content_type, file_size, status, submitted_at, verified_at) VALUES (900002, ?, '無農藥殘留檢測', '無農藥檢測', 'sample-documents/GFES_無農藥檢測報告_完整範例.pdf', 'GFES_無農藥檢測報告_完整範例.pdf', 'application/pdf', 121760, 'verified', '2026-07-18 02:20:00', '2026-07-18 08:45:00')").bind(FARMER_ID),
+    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES (?, ?, ?, ?, ?, ?, 'published', ?)").bind(FARMER_ID, "把友善耕作變成每天都看得見的選擇", "禾日友善農園用減藥、節水與田間紀錄，讓每箱蔬菜都有清楚的產地故事。", "我們從土壤開始改善，記錄每次灌溉、施肥與巡田，也讓消費者知道手上的綠點如何支持設備與耕作調整。\n每一次訂購與支持，都是農園持續投入友善生產的重要力量。", "照顧土地，是希望下一季還能種出安心的菜。", "/farmer-library/heri-leafy/cultivation-1.webp", "2026-08-09 00:30:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-002', ?, ?, ?, ?, ?, 'published', ?)").bind("一碗米背後，是一整季的田間選擇", "青谷稻作以節水栽培與生態田埂，兼顧稻米品質與田區生物多樣性。", "我們保留田埂植被、減少不必要用藥，並記錄每一批稻米的耕作與收穫日期。\n消費者的支持讓友善稻作不只被看見，也能持續做下去。", "讓稻田不只生產稻米，也成為許多生命的家。", "/farmer-library/qinggu-rice/cultivation-1.webp", "2026-08-08 06:00:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-003', ?, ?, ?, ?, ?, 'published', ?)").bind("讓鮮果在更低碳的方式裡抵達你手中", "山里果園改善採後保鮮與冷藏設備，降低耗能與水果損耗。", "果實採收後的保鮮，是品質也是能源議題。我們逐步導入節能冷藏與太陽能設備，並公開使用成果。", "減少一箱損耗，就多留下一份農村的收入。", "/farmer-library/shanli-pomelo/cultivation-1.webp", "2026-08-07 02:20:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_stories (farmer_id, headline, summary, body, quote, image_url, status, published_at) VALUES ('farmer-004', ?, ?, ?, ?, ?, 'published', ?)").bind("從一只循環箱開始減少產地包材", "暖田蔬果把循環周轉箱導入採收與配送流程，減少一次性紙箱與塑膠。", "從採收到配送，我們和合作通路一起建立周轉箱回收與清洗流程，讓包材能重複使用。", "每只箱子多用一次，土地就少一份負擔。", "/farmer-library/nuantian-tomato/cultivation-1.webp", "2026-08-06 08:40:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-HERI-001', ?, ?, ?, ?, ?, 'published', ?)").bind(FARMER_ID, "本週友善葉菜箱開始採收", "小白菜、青江菜與地瓜葉已進入採收期，本週訂單將依成熟度分批出貨，謝謝大家支持產地。", "採收與出貨", "/farmer-library/heri-leafy/product.webp", "2026-08-10 00:30:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-QINGGU-001', 'farmer-002', ?, ?, ?, ?, 'published', ?)").bind("友善稻田生態復育進入第二階段", "新的蜜源植物已完成栽植，近期將持續記錄昆蟲與鳥類出現情形，成果會同步回報給支持者。", "改善專案進度", "/farmer-library/qinggu-rice/cultivation-2.webp", "2026-08-09 07:10:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-SHANLI-001', 'farmer-003', ?, ?, ?, ?, 'published', ?)").bind("文旦採收與低碳冷藏排程公告", "今年文旦預計月底開始採收，支持者將優先收到批次與配送通知，果園也會公開冷藏耗能改善紀錄。", "產地公告", "/farmer-library/shanli-pomelo/product.webp", "2026-08-08 03:45:00"),
+    db.prepare("INSERT OR IGNORE INTO farmer_news (id, farmer_id, title, content, category, image_url, status, published_at) VALUES ('NEWS-NUANTIAN-001', 'farmer-004', ?, ?, ?, ?, 'published', ?)").bind("循環周轉箱回收點新增一處", "彰化合作通路新增周轉箱回收點，購買暖田蔬果商品的消費者可於下次配送時一併歸還。", "循環包材", "/farmer-library/nuantian-tomato/product.webp", "2026-08-07 01:20:00"),
   ]);
 
   const pendingActionSeeds = [
-    ["SAMPLE-ACTION-CUP-001", "consumer-002", "reusable_cup", "使用環保杯", "合作咖啡店消費，附交易明細與店家確認欄。", 10, "GFES_環保杯行動證明_正式範例.pdf", 111349, "2026-08-10 09:18:00"],
-    ["SAMPLE-ACTION-TRANSIT-001", "consumer-003", "public_transport", "搭乘大眾運輸", "捷運與公車轉乘紀錄，申請低碳通勤綠點。", 80, "GFES_大眾運輸行動證明_正式範例.pdf", 108404, "2026-08-10 09:42:00"],
-    ["SAMPLE-ACTION-EBILL-001", "consumer-004", "ebill", "改用電子帳單", "已完成紙本帳單轉電子帳單，附公用事業通知。", 50, "GFES_電子帳單行動證明_正式範例.pdf", 109839, "2026-08-10 10:05:00"],
-    ["SAMPLE-ACTION-APPLIANCE-001", "consumer-005", "energy_appliance", "購買節能家電", "購買一級能效冰箱，附發票、型號與能源效率資料。", 600, "GFES_節能家電行動證明_正式範例.pdf", 114673, "2026-08-10 10:26:00"],
-    ["SAMPLE-ACTION-CUP-002", "consumer-006", "reusable_cup", "使用環保杯", "自備環保杯完成減塑消費，附正式行動證明。", 10, "GFES_環保杯行動證明_正式範例.pdf", 111349, "2026-08-10 10:47:00"],
-    ["SAMPLE-ACTION-TRANSIT-002", "consumer-007", "public_transport", "搭乘大眾運輸", "高鐵轉乘捷運的低碳交通紀錄，請確認日期與票證。", 80, "GFES_大眾運輸行動證明_正式範例.pdf", 108404, "2026-08-10 11:09:00"],
-    ["SAMPLE-ACTION-EBILL-002", "consumer-002", "ebill", "改用電子帳單", "銀行信用卡帳單改為電子寄送，附設定完成通知。", 50, "GFES_電子帳單行動證明_正式範例.pdf", 109839, "2026-08-10 11:32:00"],
-    ["SAMPLE-ACTION-APPLIANCE-002", "consumer-004", "energy_appliance", "購買節能家電", "購買一級能效除濕機，附交易與能源標示證明。", 600, "GFES_節能家電行動證明_正式範例.pdf", 114673, "2026-08-10 11:58:00"],
+    ["SAMPLE-ACTION-CUP-001", "consumer-002", "reusable_cup", "使用環保杯", "合作咖啡店消費，附交易明細與店家確認欄。", 10, "GFES_環保杯行動證明_正式範例.pdf", 111349, "2026-08-10 01:18:00"],
+    ["SAMPLE-ACTION-TRANSIT-001", "consumer-003", "public_transport", "搭乘大眾運輸", "捷運與公車轉乘紀錄，申請低碳通勤綠點。", 80, "GFES_大眾運輸行動證明_正式範例.pdf", 108404, "2026-08-10 01:42:00"],
+    ["SAMPLE-ACTION-EBILL-001", "consumer-004", "ebill", "改用電子帳單", "已完成紙本帳單轉電子帳單，附公用事業通知。", 50, "GFES_電子帳單行動證明_正式範例.pdf", 109839, "2026-08-10 02:05:00"],
+    ["SAMPLE-ACTION-APPLIANCE-001", "consumer-005", "energy_appliance", "購買節能家電", "購買一級能效冰箱，附發票、型號與能源效率資料。", 600, "GFES_節能家電行動證明_正式範例.pdf", 114673, "2026-08-10 02:26:00"],
+    ["SAMPLE-ACTION-CUP-002", "consumer-006", "reusable_cup", "使用環保杯", "自備環保杯完成減塑消費，附正式行動證明。", 10, "GFES_環保杯行動證明_正式範例.pdf", 111349, "2026-08-10 02:47:00"],
+    ["SAMPLE-ACTION-TRANSIT-002", "consumer-007", "public_transport", "搭乘大眾運輸", "高鐵轉乘捷運的低碳交通紀錄，請確認日期與票證。", 80, "GFES_大眾運輸行動證明_正式範例.pdf", 108404, "2026-08-10 03:09:00"],
+    ["SAMPLE-ACTION-EBILL-002", "consumer-002", "ebill", "改用電子帳單", "銀行信用卡帳單改為電子寄送，附設定完成通知。", 50, "GFES_電子帳單行動證明_正式範例.pdf", 109839, "2026-08-10 03:32:00"],
+    ["SAMPLE-ACTION-APPLIANCE-002", "consumer-004", "energy_appliance", "購買節能家電", "購買一級能效除濕機，附交易與能源標示證明。", 600, "GFES_節能家電行動證明_正式範例.pdf", 114673, "2026-08-10 03:58:00"],
   ] as const;
   for (const [id, consumerId, actionType, title, note, rewardPoints, fileName, fileSize, submittedAt] of pendingActionSeeds) {
     await db.prepare("INSERT OR IGNORE INTO action_submissions (id, consumer_id, action_type, title, note, reward_points, file_key, file_name, content_type, file_size, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', ?, ?)")
@@ -915,7 +915,7 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
         db.prepare("INSERT INTO admin_audit_logs (action, target_type, target_id, detail_json) VALUES ('review_action_submission', 'action_submission', ?, ?)").bind(submissionId, json({ decision, reviewNote, rewardPoints: submission.reward_points })),
       ];
       if (decision === "approved") {
-        statements.push(db.prepare("INSERT OR IGNORE INTO point_ledger (user_id, delta_points, source_type, source_id, description, metadata_json) VALUES (?, ?, 'approved_green_action', ?, ?, ?)").bind(submission.consumer_id, submission.reward_points, `action-submission:${submissionId}`, `管理員核准：${submission.title}`, json({ submissionId, reviewedBy: "platform-admin" })));
+        statements.push(db.prepare("INSERT OR IGNORE INTO point_ledger (user_id, delta_points, source_type, source_id, description, metadata_json) VALUES (?, ?, 'approved_green_action', ?, ?, ?)").bind(submission.consumer_id, submission.reward_points, `action-submission:${submissionId}`, `管理員核准：${submission.title}`, json({ submissionId, reviewedBy: actor?.profileId ?? "platform-admin" })));
       }
       await db.batch(statements);
       return { ok: true, status: decision };
@@ -1047,6 +1047,7 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       const parameterKey = String(body.parameterKey ?? "").trim();
       const value = String(body.value ?? "").trim();
       if (!parameterKey || !value) throw new Error("參數值不可留白");
+      if (!await queryOne(db, "SELECT parameter_key FROM system_parameters WHERE parameter_key = ?", parameterKey)) throw new Error("找不到指定的系統參數");
       await db.batch([
         db.prepare("UPDATE system_parameters SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE parameter_key = ?").bind(value, parameterKey),
         db.prepare("INSERT INTO admin_audit_logs (action, target_type, target_id, detail_json) VALUES ('update_parameter', 'parameter', ?, ?)").bind(parameterKey, json({ value })),
@@ -1081,8 +1082,9 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
     }
     case "register_local_action": {
       const actionId = String(body.actionId ?? "").trim();
-      const localAction = await queryOne<{ id: string; title: string }>(db, "SELECT id, title FROM local_actions WHERE id = ? AND status = 'open'", actionId);
+      const localAction = await queryOne<{ id: string; title: string; event_end: string }>(db, "SELECT id, title, event_end FROM local_actions WHERE id = ? AND status = 'open'", actionId);
       if (!localAction) throw new Error("找不到可報名的綠色行動");
+      if (localAction.event_end && Date.parse(localAction.event_end) < Date.now()) throw new Error("此活動已結束，無法報名");
       const attendeeName = requiredText(body.attendeeName, "參加人姓名", 80);
       const attendeePhone = requiredText(body.attendeePhone, "聯絡電話", 30);
       const attendeeEmail = requiredText(body.attendeeEmail, "電子信箱", 160).toLowerCase();
@@ -1134,14 +1136,21 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       if (existingRun) throw new Error("此驗證資料已處理，不會重複發放綠點");
       const runId = `VERIFY-${crypto.randomUUID()}`;
       const responsePayload = { ...parse<Record<string, unknown>>(setting.sample_response_json, {}), simulation: true, verifiedAt: new Date().toISOString() };
+      // The simulated API always passes, so a consumer invoice only becomes a pending
+      // submission; points are granted when an admin approves it. Admin test runs grant nothing.
+      const pendingInvoice = actor?.role === "consumer";
       const statements = [
-        db.prepare("INSERT INTO verification_runs (id, service_key, input_json, response_json, status, reward_points, input_fingerprint) VALUES (?, ?, ?, ?, 'success', ?, ?)").bind(runId, serviceKey, json(input), json(responsePayload), setting.reward_points, fingerprint),
+        db.prepare("INSERT INTO verification_runs (id, service_key, input_json, response_json, status, reward_points, input_fingerprint) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(runId, serviceKey, json(input), json(responsePayload), pendingInvoice ? "pending_review" : "success", pendingInvoice ? setting.reward_points : 0, fingerprint),
       ];
-      if (setting.reward_points > 0) {
-        statements.push(db.prepare("INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description, metadata_json) VALUES (?, ?, ?, ?, ?, ?)").bind(consumerId, setting.reward_points, `simulation_${serviceKey}`, `verification:${serviceKey}:${fingerprint}`, `${setting.display_name}測試回饋`, json({ simulation: true, serviceKey, runId })));
+      if (pendingInvoice) {
+        const invoice = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+        const invoiceNumber = String(invoice.invoiceNumber ?? "").slice(0, 40) || "未填號碼";
+        const summary = [`發票 ${invoiceNumber}`, invoice.amount != null ? `NT$ ${String(invoice.amount).slice(0, 12)}` : "", String(invoice.date ?? invoice.transactionDate ?? "").slice(0, 20), String(invoice.note ?? "").slice(0, 200)].filter(Boolean).join("・");
+        statements.push(db.prepare(`INSERT INTO action_submissions (id, consumer_id, action_type, title, note, reward_points, file_key, file_name, content_type, file_size, file_sha256)
+          VALUES (?, ?, 'invoice', ?, ?, ?, '', ?, 'invoice/manual-entry', 0, ?)`).bind(`INVOICE-${runId}`, consumerId, "綠色消費發票", summary, setting.reward_points, `發票 ${invoiceNumber}`, fingerprint));
       }
       await db.batch(statements);
-      return { ok: true, runId, response: responsePayload };
+      return { ok: true, runId, response: responsePayload, pendingReview: pendingInvoice };
     }
     case "update_farmer_story": {
       const status = body.status === "published" ? "published" : "draft";
@@ -1219,12 +1228,16 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       if (supportPoints <= 0) throw new Error("此專案已達成募集目標");
       const current = await balance(db, consumerId);
       if (current < supportPoints) throw new Error(`綠點不足，還差 ${supportPoints - current} 點`);
+      // Every write is conditioned on the project state read above, so a concurrent supporter
+      // turns this whole batch into a no-op instead of charging points the project never records.
+      const unchanged = "EXISTS (SELECT 1 FROM projects WHERE id = ? AND status = 'funding' AND raised_points = ?)";
       await db.batch([
-        db.prepare("INSERT INTO project_supports (consumer_id, project_id, points) VALUES (?, ?, ?)").bind(consumerId, projectId, supportPoints),
-        db.prepare("INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) VALUES (?, ?, ?, ?, ?)").bind(consumerId, -supportPoints, "project_support", `support:${projectId}`, "支持小農改善專案"),
-        db.prepare("INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) VALUES (?, ?, ?, ?, ?)").bind(project.farmer_id, supportPoints, "consumer_support", `support:${projectId}`, "收到消費者改善專案支持"),
+        db.prepare(`INSERT INTO project_supports (consumer_id, project_id, points) SELECT ?, ?, ? WHERE ${unchanged}`).bind(consumerId, projectId, supportPoints, projectId, project.raised_points),
+        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(consumerId, -supportPoints, "project_support", `support:${projectId}`, "支持小農改善專案", projectId, project.raised_points),
+        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(project.farmer_id, supportPoints, "consumer_support", `support:${projectId}`, "收到消費者改善專案支持", projectId, project.raised_points),
         db.prepare("UPDATE projects SET raised_points = raised_points + ?, supporters = supporters + 1, progress = MIN(100, CAST((raised_points + ?) * 100.0 / target_points AS INTEGER)), status = CASE WHEN raised_points + ? >= target_points THEN 'review' ELSE status END WHERE id = ? AND status = 'funding' AND raised_points = ?").bind(supportPoints, supportPoints, supportPoints, projectId, project.raised_points),
       ]);
+      if (!await queryOne(db, "SELECT id FROM project_supports WHERE consumer_id = ? AND project_id = ?", consumerId, projectId)) throw new Error("專案募集狀態剛更新，請重新整理後再試一次");
       return { ok: true };
     }
     case "redeem_product": {
@@ -1303,11 +1316,11 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       if (!decision) throw new Error("請選擇核准或退回");
       const request = await queryOne<Record<string, unknown>>(db, `SELECT cr.*, o.stage, p.farmer_id AS owner_id FROM change_requests cr JOIN orders o ON o.id = cr.target_id JOIN products p ON p.id = o.product_id WHERE cr.id = ? AND cr.request_type = 'order'`, requestId);
       if (!request || request.status !== "pending") throw new Error("找不到待處理的訂單修改申請");
-      const actor = await queryOne<{ role: string }>(db, "SELECT role FROM profiles WHERE id = ?", farmerId);
-      if (actor?.role !== "admin" && request.owner_id !== farmerId) throw new Error("您無權處理此訂單修改申請");
+      const reviewer = await queryOne<{ role: string }>(db, "SELECT role FROM profiles WHERE id = ?", farmerId);
+      if (reviewer?.role !== "admin" && request.owner_id !== farmerId) throw new Error("您無權處理此訂單修改申請");
       if (decision === "approved" && Number(request.stage) >= 2) throw new Error("訂單已進入配送階段，無法套用修改");
       const reviewNote = String(body.reviewNote ?? "").trim().slice(0, 500);
-      const statements = [db.prepare("UPDATE change_requests SET status = ?, reviewer_id = ?, review_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(decision, farmerId, reviewNote, requestId)];
+      const statements = [db.prepare("UPDATE change_requests SET status = ?, reviewer_id = ?, review_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(decision, actor?.profileId ?? farmerId, reviewNote, requestId)];
       if (decision === "approved") {
         const value = parse<Record<string, string>>(String(request.requested_json), {});
         statements.unshift(db.prepare("UPDATE orders SET recipient_name = ?, recipient_phone = ?, postal_code = ?, shipping_city = ?, shipping_district = ?, shipping_address = ?, delivery_note = ? WHERE id = ? AND stage < 2").bind(value.recipientName, value.recipientPhone, value.postalCode, value.shippingCity, value.shippingDistrict, value.shippingAddress, value.deliveryNote, request.target_id));
@@ -1436,7 +1449,7 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       if (!isAdmin && request.institution_id !== institutionId) throw new Error("您沒有權限審核其他機構的修改申請");
       if (decision === "approved" && Number(request.stage) >= 2) throw new Error("資源已進入配送或排程階段，無法套用修改");
       const reviewNote = String(body.reviewNote ?? "").trim().slice(0, 500);
-      const statements = [db.prepare("UPDATE change_requests SET status = ?, reviewer_id = ?, review_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(decision, institutionId, reviewNote, requestId)];
+      const statements = [db.prepare("UPDATE change_requests SET status = ?, reviewer_id = ?, review_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'").bind(decision, actor?.profileId ?? institutionId, reviewNote, requestId)];
       if (decision === "approved") {
         const value = parse<Record<string, string>>(String(request.requested_json), {});
         statements.unshift(db.prepare("UPDATE resource_redemptions SET cooperative = ?, contact_name = ?, contact_phone = ?, fulfillment_type = ?, delivery_address = ?, appointment_date = ?, appointment_slot = ?, note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND stage < 2").bind(value.cooperative, value.contactName, value.contactPhone, value.fulfillmentType, value.deliveryAddress, value.appointmentDate, value.appointmentSlot, value.note, request.target_id));
@@ -1481,15 +1494,15 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
         ? await queryAll<Record<string, unknown>>(db, `${orderBase} ORDER BY o.created_at DESC, o.id`)
         : [];
   const ledgerRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM point_ledger WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 80", consumerId);
-  const supportRows = await queryAll<{ project_id: string }>(db, "SELECT project_id FROM project_supports WHERE consumer_id = ?", consumerId);
+  const supportRows = await queryAll<{ project_id: string; created_at: string }>(db, "SELECT project_id, created_at FROM project_supports WHERE consumer_id = ?", consumerId);
   const incentiveRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM incentive_programs ORDER BY created_at DESC, id");
   const resourceRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM resource_offers WHERE status = 'available' ORDER BY required_points");
   const resourceRedemptionRows = viewer?.role === "farmer"
-    ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM resource_redemptions WHERE farmer_id = ? ORDER BY created_at DESC, id DESC", farmerId)
+    ? await queryAll<Record<string, unknown>>(db, "SELECT rr.*, p.display_name AS farmer_name FROM resource_redemptions rr LEFT JOIN profiles p ON p.id = rr.farmer_id WHERE rr.farmer_id = ? ORDER BY rr.created_at DESC, rr.id DESC", farmerId)
     : viewer?.role === "institution"
-      ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM resource_redemptions WHERE institution_id = ? ORDER BY created_at DESC, id DESC", institutionId)
+      ? await queryAll<Record<string, unknown>>(db, "SELECT rr.*, p.display_name AS farmer_name FROM resource_redemptions rr LEFT JOIN profiles p ON p.id = rr.farmer_id WHERE rr.institution_id = ? ORDER BY rr.created_at DESC, rr.id DESC", institutionId)
       : viewer?.role === "admin" || !viewer
-        ? await queryAll<Record<string, unknown>>(db, "SELECT * FROM resource_redemptions ORDER BY created_at DESC, id DESC")
+        ? await queryAll<Record<string, unknown>>(db, "SELECT rr.*, p.display_name AS farmer_name FROM resource_redemptions rr LEFT JOIN profiles p ON p.id = rr.farmer_id ORDER BY rr.created_at DESC, rr.id DESC")
         : [];
   const changeRequestRows = await queryAll<Record<string, unknown>>(db, `SELECT cr.*, p.farmer_id AS order_owner_id, rr.farmer_id AS resource_owner_id, rr.institution_id AS resource_institution_id
     FROM change_requests cr
@@ -1719,14 +1732,15 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     consumerNews: consumerNewsRows.map(newsToPublic),
     incentives: incentiveRows.map((row) => ({ id: row.id, institutionId: row.institution_id, name: row.name, sponsor: row.sponsor, action: row.action, reward: row.reward, budgetPoints: Number(row.budget_points), participants: row.participants, progress: Number(row.progress), esg: row.esg })),
     resources: resourceRows.map((row) => ({ id: row.id, category: row.category, name: row.name, requiredScore: Number(row.required_points), amount: `${Number(row.required_points).toLocaleString()} 綠點`, term: row.term, rate: row.rate, description: row.description, purpose: row.purpose })),
-    resourceRedemptions: resourceRedemptionRows.map((row) => ({ id: row.id, institutionId: row.institution_id, farmerId: row.farmer_id, offerId: row.offer_id, resourceName: row.resource_name, points: Number(row.points), cooperative: row.cooperative, contactName: row.contact_name, contactPhone: row.contact_phone, fulfillmentType: row.fulfillment_type, deliveryAddress: row.delivery_address, appointmentDate: row.appointment_date, appointmentSlot: row.appointment_slot, note: row.note, stage: Number(row.stage), status: row.status, trackingNumber: row.tracking_number, createdAt: row.created_at, updatedAt: row.updated_at })),
+    resourceRedemptions: resourceRedemptionRows.map((row) => ({ id: row.id, institutionId: row.institution_id, farmerId: row.farmer_id, farmerName: row.farmer_name ?? row.farmer_id, offerId: row.offer_id, resourceName: row.resource_name, points: Number(row.points), cooperative: row.cooperative, contactName: row.contact_name, contactPhone: row.contact_phone, fulfillmentType: row.fulfillment_type, deliveryAddress: row.delivery_address, appointmentDate: row.appointment_date, appointmentSlot: row.appointment_slot, note: row.note, stage: Number(row.stage), status: row.status, trackingNumber: row.tracking_number, createdAt: row.created_at, updatedAt: row.updated_at })),
     changeRequests: changeRequestRows.map((row) => ({ id: row.id, requestType: row.request_type, targetId: row.target_id, requesterId: row.requester_id, ownerId: row.request_type === "order" ? row.order_owner_id : row.resource_owner_id, institutionId: row.resource_institution_id, reasonCode: row.reason_code, reasonDetail: row.reason_detail, requested: parse(row.requested_json as string, {}), status: row.status, reviewerId: row.reviewer_id, reviewNote: row.review_note, createdAt: row.created_at, updatedAt: row.updated_at })),
     localActions: actionRows.map((row) => ({ id: row.id, title: row.title, organizer: row.organizer, description: row.description, rewardPoints: Number(row.reward_points), city: row.city, district: row.district, address: row.address, details: row.details, eventStart: row.event_start, eventEnd: row.event_end, distance: Number(row.distance_km) })),
     merchantOffers: merchantRows.map((row) => ({ id: row.id, merchant: row.merchant, title: row.title, description: row.description, requiredPoints: Number(row.required_points), city: row.city, district: row.district, address: row.address, details: row.details, distance: Number(row.distance_km) })),
     registeredActionIds: registrationRows.map((row) => row.action_id),
-    orders: orderRows.map((row) => ({ id: row.id, productId: row.product_id, farmerId: row.farmer_id, title: row.title, image: row.image, farmer: row.farmer_name, points: Number(row.points), quantity: Number(row.quantity), stage: Number(row.stage), status: row.status, recipientName: row.recipient_name || "林子晴", recipientPhone: row.recipient_phone || "0912-345-678", postalCode: row.postal_code || "106", shippingCity: row.shipping_city, shippingDistrict: row.shipping_district, shippingAddress: row.shipping_address || "仁愛路四段示範地址", deliveryNote: row.delivery_note || "請於送達前電話聯絡", carrier: row.carrier || "", trackingNumber: row.tracking_number || "", fulfillmentNote: row.fulfillment_note || "", packedAt: row.packed_at || "", shippedAt: row.shipped_at || "", completedAt: row.completed_at || "", createdAt: row.created_at, updatedAt: row.updated_at || row.created_at })),
+    orders: orderRows.map((row) => ({ id: row.id, productId: row.product_id, farmerId: row.farmer_id, title: row.title, image: row.image, farmer: row.farmer_name, points: Number(row.points), quantity: Number(row.quantity), stage: Number(row.stage), status: row.status, recipientName: row.recipient_name || "林子晴", recipientPhone: row.recipient_phone || "0912-345-678", postalCode: row.postal_code || "106", shippingCity: row.shipping_city, shippingDistrict: row.shipping_district, shippingAddress: row.shipping_address || "仁愛路四段示範地址", deliveryNote: row.delivery_note || "", carrier: row.carrier || "", trackingNumber: row.tracking_number || "", fulfillmentNote: row.fulfillment_note || "", packedAt: row.packed_at || "", shippedAt: row.shipped_at || "", completedAt: row.completed_at || "", createdAt: row.created_at, updatedAt: row.updated_at || row.created_at })),
     ledger: ledgerRows.map((row) => ({ id: Number(row.id), deltaPoints: Number(row.delta_points), sourceType: row.source_type, sourceId: row.source_id, description: row.description, createdAt: row.created_at })),
     supportedProjectIds: supportRows.map((row) => row.project_id),
+    supportDates: Object.fromEntries(supportRows.map((row) => [row.project_id, row.created_at])),
     redeemedProductIds: orderRows.map((row) => row.product_id),
     evidence: evidenceRows.map((row) => ({ id: Number(row.id), title: row.title, evidenceType: row.evidence_type, fileName: row.file_name, contentType: row.content_type, fileSize: row.file_size == null ? null : Number(row.file_size), status: row.status, projectId: row.project_id, productId: row.product_id, submittedAt: row.submitted_at })),
     outcomeReports: outcomeRows.map((row) => ({ id: Number(row.id), institutionId: row.institution_id, projectId: row.project_id, waterLiters: row.water_liters, carbonKg: row.carbon_kg, beneficiaries: row.beneficiaries, note: row.note, status: row.status, submittedAt: row.submitted_at })),

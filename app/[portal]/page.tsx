@@ -6,9 +6,9 @@ import { GreenPlatformApp, type LoginRole } from "../GreenPlatformDemo";
 type BackendRole = Exclude<LoginRole, "consumer">;
 
 const portalLabels: Record<BackendRole, string> = {
-  farmer: "合作小農後台｜綠色消費平台",
-  institution: "銀行／政府／企業後台｜綠色消費平台",
-  admin: "平台管理員後台｜綠色消費平台",
+  farmer: "合作小農後台",
+  institution: "銀行／政府／企業後台",
+  admin: "平台管理員後台",
 };
 
 function isBackendRole(value: string): value is BackendRole {

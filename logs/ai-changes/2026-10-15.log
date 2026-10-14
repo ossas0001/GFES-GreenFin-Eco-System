@@ -1,0 +1,14 @@
+2026-10-15 — QA review fixes, GreenFin upstream reconciliation and mobile layout
+
+- Ran a four-role functional review against local D1/R2 and compared GreenFin rules with stoy95536/GreenFin. Findings and the comparison table are kept outside the repository in the QA report.
+- Bank GreenFin cases now pick the newest indicator and Data Health row per type (previously the oldest). Recalculation removes experience left by deactivated actions, matching upstream recalculation.
+- Evidence First: green actions require at least one owned, valid, verified, non-V0 evidence record; actions without evidence are treated as V0 (0 XP). This intentionally differs from upstream, which grants V1 (50%). Farmer form gained an evidence picker; legacy no-evidence actions are labelled as not recognised.
+- Dimension cap of 250 now applies per calendar year of the action date; total cap of 1000 unchanged.
+- Experience level labels reverted to upstream names (尚未建立／萌芽／成長／穩健／領航／示範).
+- Consumer invoice verification now creates a pending action submission reviewed by the admin before points are granted; admin test runs grant no points. Duplicate invoice protection unchanged.
+- Recorded the real actor as reviewer, rejected unknown system parameters, guarded concurrent project support writes, added frame/sniff/referrer/HSTS response headers, and blocked registration for ended activities.
+- Display: real receipt dates and numbers, computed farmer order/traceability metrics, Chinese labels for indicators, scopes and ledger sources, UTC-to-Taiwan time display, Taiwan-day defaults and authorization day boundaries, manually corrected OCR fields no longer flagged as low confidence, farmer names in fulfilment, no duplicated page titles.
+- Mobile: styled the GreenFin sub-navigation, added automatic horizontal-scroll hints (visible scrollbar and edge fade), admin mobile logout, fixed counter wrapping and account ID clipping, stacked the order layout below 1180px.
+- Not changed by request: outcome reports remain routed to institution-001; admin order-change review for non-demo farmers unchanged.
+
+Gate: verified locally; see logs/test-results/2026-10-15-qa-review-fixes.txt.

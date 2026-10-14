@@ -16,25 +16,30 @@ export type CalculationAction = { id: string; dimension: string; actionLevel: "B
 export function calculateExperienceResults(engine: GreenFinRuleEngine, actions: CalculationAction[], records: CalculationRecord[]) {
   const recordMap = new Map(records.map((record) => [record.id, record]));
   const dimensions = Object.fromEntries(engine.experience.dimensions.map((dimension) => [dimension, 0])) as Record<string, number>;
+  // The per-dimension limit is annual, keyed by the calendar year of the action date.
+  const annualDimensions = new Map<string, number>();
   let total = 0;
   const transactions = actions.sort((a, b) => a.actionDate.localeCompare(b.actionDate)).map((action) => {
     const baseValue = engine.experience.baseValues[action.actionLevel];
     const evidence = action.evidenceRecordIds.map((id) => recordMap.get(id)).filter(Boolean) as CalculationRecord[];
     const levelOrder = { V0: 0, V1: 1, V2: 2, V3: 3 };
+    // Evidence First: an action without any usable evidence is not recognised (V0).
     const sourceLevel = evidence.length
       ? evidence.reduce<GreenFinSourceLevel>((lowest, record) => levelOrder[record.sourceLevel] < levelOrder[lowest] ? record.sourceLevel : lowest, "V3")
-      : "V1";
+      : "V0";
     const ratio = engine.experience.sourceRatios[sourceLevel];
     const rawValue = baseValue * ratio;
-    const dimensionRemaining = Math.max(0, engine.experience.annualLimitPerDimension - (dimensions[action.dimension] ?? 0));
+    const annualKey = `${action.actionDate.slice(0, 4)}:${action.dimension}`;
+    const dimensionRemaining = Math.max(0, engine.experience.annualLimitPerDimension - (annualDimensions.get(annualKey) ?? 0));
     const totalRemaining = Math.max(0, engine.experience.totalLimit - total);
     const effectiveValue = Math.min(rawValue, dimensionRemaining, totalRemaining);
+    annualDimensions.set(annualKey, (annualDimensions.get(annualKey) ?? 0) + effectiveValue);
     dimensions[action.dimension] = (dimensions[action.dimension] ?? 0) + effectiveValue;
     total += effectiveValue;
     return {
       actionId: action.id, dimension: action.dimension, baseValue, sourceLevel, sourceRecognitionRatio: ratio, effectiveValue,
       evidenceIds: evidence.map((record) => record.id),
-      trace: engine.createTrace(evidence.map((record) => record.id), { formula: `${action.actionLevel}(${baseValue}) × ${sourceLevel}(${ratio})`, rawValue, effectiveValue, capped: effectiveValue < rawValue }),
+      trace: engine.createTrace(evidence.map((record) => record.id), { formula: `${action.actionLevel}(${baseValue}) × ${sourceLevel}(${ratio})`, rawValue, effectiveValue, capped: effectiveValue < rawValue, ...(evidence.length ? {} : { reason: "NO_EVIDENCE" }) }),
     };
   });
   const levelEntry = Object.entries(engine.experience.levels).find(([, [minimum, maximum]]) => total >= minimum && total <= maximum);
@@ -96,7 +101,7 @@ export function calculateDataHealthResults(engine: GreenFinRuleEngine, records: 
     const missing = required.filter((field) => !fields.has(field));
     const critical = domainAnomalies.filter((anomaly) => anomaly.severity === "CRITICAL");
     const invalid = domainRecords.filter((record) => !record.isValid || record.sourceLevel === "V0");
-    if (critical.length || missing.length || invalid.length) return { domain, status: "RED", reasons: [`重大異常 ${critical.length} 筆`, ...(missing.length ? [`缺少必要欄位：${missing.join("、")}`] : []), ...(invalid.length ? [`無法使用紀錄 ${invalid.length} 筆`] : [])], actions: ["請檢視異常並補充有效佐證"], evidenceIds };
+    if (critical.length || missing.length || invalid.length) return { domain, status: "RED", reasons: [...(critical.length ? [`重大異常 ${critical.length} 筆`] : []), ...(missing.length ? [`缺少必要欄位：${missing.join("、")}`] : []), ...(invalid.length ? [`無法使用紀錄 ${invalid.length} 筆`] : [])], actions: ["請檢視異常並補充有效佐證"], evidenceIds };
     const warning = domainAnomalies.filter((anomaly) => anomaly.severity === "WARNING");
     const expiringSoon = domainRecords.some((record) => {
       const value = record.data["有效期限"];

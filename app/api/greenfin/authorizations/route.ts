@@ -40,8 +40,10 @@ export async function POST(request: Request) {
     const institutionId = String(body.institutionId ?? "").trim();
     const purpose = String(body.purpose ?? "").trim();
     const scopes = [...new Set((body.dataScope ?? []).map(String))];
-    const startAt = new Date(body.startAt ?? Date.now());
-    const expireAt = new Date(body.expireAt ?? 0);
+    // Date-only inputs come from Taiwan users; read them as Taiwan calendar days (start of day / end of day).
+    const parseDay = (value: string | undefined, endOfDay: boolean) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T${endOfDay ? "23:59:59" : "00:00:00"}+08:00`) : new Date(value ?? 0);
+    const startAt = body.startAt ? parseDay(body.startAt, false) : new Date();
+    const expireAt = parseDay(body.expireAt, true);
     if (!institutionId || !purpose || purpose.length > 500) return Response.json({ error: "請選擇機構並填寫 1 至 500 字授權目的" }, { status: 400 });
     if (!scopes.length || scopes.some((scope) => !GREENFIN_AUTHORIZATION_SCOPES.includes(scope as never))) return Response.json({ error: "授權資料範圍無效" }, { status: 400 });
     if (!Number.isFinite(startAt.valueOf()) || !Number.isFinite(expireAt.valueOf()) || expireAt <= startAt) return Response.json({ error: "授權起訖時間無效" }, { status: 400 });

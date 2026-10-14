@@ -1,0 +1,26 @@
+QA review fixes, GreenFin upstream reconciliation and mobile layout
+Date: 2026-10-15
+
+npx tsc --noEmit
+PASS
+
+npm run lint
+PASS — 0 errors, 26 pre-existing non-blocking warnings
+
+npm test
+PASS — 49 tests passed, 0 failed (2 new: no-evidence actions earn 0 XP; dimension cap applies per action year)
+
+npm run test:security:local
+PASS — updated to expect pending invoice review instead of an immediate reward
+
+npx wrangler deploy --dry-run
+PASS — isolated D1 and R2 bindings detected
+
+Local API functional checks (15)
+PASS — invoice pending until admin approval (+120 after approval), duplicate invoice rejected, admin test run grants no points, unknown parameter rejected, ended activity registration blocked, action without evidence rejected, verified evidence listed, today's Taiwan date accepted, XP excludes no-evidence actions, bank experience equals farmer total, security headers present
+
+Local browser checks
+PASS — bank GreenFin case shows latest indicators matching the farmer workspace, Chinese indicator/scope labels
+PASS — 375px scan of all consumer, farmer (incl. GreenFin sub-tabs), institution and admin sections: no overflow, clipping, squeezed text or broken images
+PASS — horizontal scroll hints on admin mobile nav and GreenFin sub-navigation; admin mobile logout present
+PASS — order detail at 1024px is 622px wide (previously 280px)

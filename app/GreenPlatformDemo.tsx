@@ -188,6 +188,7 @@ type FarmerProduct = {
 type ProjectAllocation = { label: string; percent: number };
 type ProjectStory = { location: string; headline: string; quote: string; paragraphs: readonly string[] };
 type LocalProject = {
+  receiptIssuedAt?: string;
   id: string;
   farmerId?: string;
   kind: "support" | "redeem";
@@ -309,12 +310,13 @@ type BackendSnapshot = {
   consumerNews: FarmerNews[];
   incentives: IncentiveProgram[];
   resources: Array<{ id: string; category: string; name: string; requiredScore: number; amount: string; term: string; rate: string; description: string; purpose: string }>;
-  resourceRedemptions: Array<{ id: string; institutionId: string; farmerId: string; offerId: string; resourceName: string; points: number; cooperative: string; contactName: string; contactPhone: string; fulfillmentType: "delivery" | "appointment"; deliveryAddress: string; appointmentDate: string; appointmentSlot: string; note: string; stage: number; status: string; trackingNumber: string; createdAt: string; updatedAt: string }>;
+  resourceRedemptions: Array<{ id: string; institutionId: string; farmerId: string; farmerName?: string; offerId: string; resourceName: string; points: number; cooperative: string; contactName: string; contactPhone: string; fulfillmentType: "delivery" | "appointment"; deliveryAddress: string; appointmentDate: string; appointmentSlot: string; note: string; stage: number; status: string; trackingNumber: string; createdAt: string; updatedAt: string }>;
   changeRequests: Array<{ id: string; requestType: "order" | "resource"; targetId: string; requesterId: string; ownerId: string; institutionId?: string; reasonCode: string; reasonDetail: string; requested: Record<string, string>; status: "pending" | "approved" | "rejected"; reviewerId: string; reviewNote: string; createdAt: string; updatedAt: string }>;
   localActions: Array<{ id: string; title: string; organizer: string; description: string; rewardPoints: number; city: string; district: string; address: string; details: string; eventStart: string; eventEnd: string; distance: number }>;
   merchantOffers: Array<{ id: string; merchant: string; title: string; description: string; requiredPoints: number; city: string; district: string; address: string; details: string; distance: number }>;
   registeredActionIds: string[];
   orders: Array<{ id: string; productId: string; farmerId?: string; title: string; image: string; farmer: string; points: number; quantity: number; stage: number; status: string; recipientName: string; recipientPhone: string; postalCode: string; shippingCity: string; shippingDistrict: string; shippingAddress: string; deliveryNote: string; carrier: string; trackingNumber: string; fulfillmentNote: string; packedAt: string; shippedAt: string; completedAt: string; createdAt: string; updatedAt: string }>;
+  supportDates?: Record<string, string>;
   ledger: Array<{ id: number; deltaPoints: number; sourceType: string; sourceId: string | null; description: string; createdAt: string }>;
   supportedProjectIds: string[];
   redeemedProductIds: string[];
@@ -769,7 +771,13 @@ const initialImprovementProjects: LocalProject[] = [
 function getReceiptNumber(item: LocalProject) {
   const index = localProjects.findIndex((project) => project.id === item.id);
   const customNumber = item.id.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0) % 9000;
-  return `GI-20260731-${String(index >= 0 ? 186 + index : 1000 + customNumber).padStart(4, "0")}`;
+  const issued = item.receiptIssuedAt ? parseDbTime(item.receiptIssuedAt) : null;
+  const dateCode = issued && !Number.isNaN(issued.getTime()) ? localDateInput(issued).replaceAll("-", "") : "20260731";
+  return `GI-${dateCode}-${String(index >= 0 ? 186 + index : 1000 + customNumber).padStart(4, "0")}`;
+}
+
+function receiptIssuedLabel(item: LocalProject) {
+  return item.receiptIssuedAt ? formatDbTime(item.receiptIssuedAt, { year: "numeric", month: "2-digit", day: "2-digit" }) : "已完成";
 }
 
 const localProjectStories = {
@@ -1108,7 +1116,46 @@ function ModalShell({
   );
 }
 
+// Marks every horizontally scrollable box so CSS can show a scrollbar and fade the side that still has content.
+function useHorizontalScrollHints() {
+  useEffect(() => {
+    let frame = 0;
+    const update = (element: HTMLElement) => {
+      const scrollable = element.scrollWidth > element.clientWidth + 4;
+      if (!scrollable) {
+        if (element.dataset.scrollX) delete element.dataset.scrollX;
+        return;
+      }
+      const atStart = element.scrollLeft <= 2;
+      const atEnd = element.scrollLeft + element.clientWidth >= element.scrollWidth - 2;
+      element.dataset.scrollX = atStart ? "start" : atEnd ? "end" : "middle";
+    };
+    const scan = () => {
+      frame = 0;
+      for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+        const overflowX = getComputedStyle(element).overflowX;
+        if (overflowX === "auto" || overflowX === "scroll") update(element);
+        else if (element.dataset.scrollX) delete element.dataset.scrollX;
+      }
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(scan); };
+    const onScroll = (event: Event) => { if (event.target instanceof HTMLElement && event.target.dataset.scrollX) update(event.target); };
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", schedule);
+    document.addEventListener("scroll", onScroll, true);
+    schedule();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+      document.removeEventListener("scroll", onScroll, true);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+}
+
 export function GreenPlatformApp({ initialPortal, initialSessionExpected = false }: { initialPortal?: LoginRole; initialSessionExpected?: boolean } = {}) {
+  useHorizontalScrollHints();
   const [screen, setScreen] = useState<"home" | "dashboard">("home");
   const [adminMode, setAdminMode] = useState(false);
   const [role, setRole] = useState<Role>(initialPortal && initialPortal !== "admin" ? initialPortal : "consumer");
@@ -1422,7 +1469,11 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   const managedFarmerProjects = useMemo(() => backendState?.projects ?? [localProjects[0], ...farmerProjects], [backendState, farmerProjects]);
   const supportedProjects = availableLocalProjects.filter((item) => item.kind === "support" && supportedProjectIds.includes(item.id));
   const redeemedProjects = availableLocalProjects.filter((item) => item.kind === "redeem" && redeemedProjectIds.includes(item.id));
-  const receiptItems = [...supportedProjects, ...redeemedProjects];
+  // Receipts carry the real support / first order time so their dates and numbers are not fixed demo values.
+  const receiptItems = [
+    ...supportedProjects.map((item) => ({ ...item, receiptIssuedAt: backendState?.supportDates?.[item.id] })),
+    ...redeemedProjects.map((item) => ({ ...item, receiptIssuedAt: backendState?.orders.filter((order) => order.productId === item.id).map((order) => order.createdAt).sort()[0] })),
+  ];
   const selectedProject = availableLocalProjects.find((item) => item.id === selectedProjectId) || localProjects[0];
   const receiptProject = availableLocalProjects.find((item) => item.id === lastSupportedId) || localProjects[0];
   const invoiceRewardPoints = backendState?.integrationSettings.find((item) => item.serviceKey === "invoice")?.rewardPoints ?? 120;
@@ -1729,7 +1780,6 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         void sendAction("simulate_integration", verificationPayload, { confirmedByCheckbox: true }).then((snapshot) => setInvoiceStage(snapshot ? "success" : "form"));
         return;
       }
-      setPoints((value) => value + 120);
       setInvoiceStage("success");
     }, 950);
   }
@@ -2580,9 +2630,26 @@ function StoryCard({
   );
 }
 
+const ledgerSourceLabels: Record<string, string> = {
+  platform_reward: "平台回饋", institution_task: "政府／企業任務", ebill: "電子帳單", energy_appliance: "節能家電", public_transport: "大眾運輸",
+  reusable_cup: "環保杯", merchant_purchase: "合作通路消費", consumer_welcome: "新會員獎勵", approved_green_action: "行動證明核准",
+  project_support: "支持改善專案", consumer_support: "收到專案支持", product_redeem: "兌換小農商品", product_order: "商品訂單收入",
+  merchant_redeem: "兌換商家優惠", resource_redeem: "農會資源兌換", admin_adjustment: "管理員調整", admin_grant: "管理員發送",
+};
+
+// SQLite CURRENT_TIMESTAMP values have no zone and are UTC.
+function parseDbTime(value: string) {
+  return new Date(value.includes("T") || /[+-]\d\d:?\d\d$|Z$/.test(value) ? value : `${value.replace(" ", "T")}Z`);
+}
+
+function formatDbTime(value: string, options?: Intl.DateTimeFormatOptions) {
+  const date = parseDbTime(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-TW", options);
+}
+
 function formatPublishedAt(value: string) {
   if (!value) return "尚未發布";
-  const date = new Date(value.includes("T") ? value : `${value.replace(" ", "T")}+08:00`);
+  const date = parseDbTime(value);
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-TW", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
@@ -2590,7 +2657,7 @@ function FarmerNewsFeed({ news, emptyText = "目前尚無小農最新消息。" 
   if (news.length === 0) return <div className="farmer-news-empty"><Newspaper /><p>{emptyText}</p></div>;
   return <div className="farmer-news-grid">{news.map((item) => <article className={`farmer-news-card ${item.image ? "" : "no-image"}`} key={item.id}>
     {item.image && <img src={item.image} alt={`${item.farmerName}・${item.title}`} />}
-    <div><span className="farmer-news-category">{item.category}{item.isDemo ? "・DEMO" : ""}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未開始"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
+    <div><span className="farmer-news-category">{item.category}{item.isDemo ? "・DEMO" : ""}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未建立"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
   </article>)}</div>;
 }
 
@@ -2599,7 +2666,7 @@ function FarmerUpdatesSection({ stories: farmerStories, news }: PublicContent) {
   return <section className="section farmer-updates-section" id="farmer-updates"><div className="container">
     <header className="section-heading"><span className="eyebrow">產地即時連線</span><h2>小農故事與最新消息</h2><p>小農可更新耕作故事與採收近況；測試帳號內容標示為 DEMO。</p></header>
     {farmerStories.length > 0 && <div className="farmer-story-grid">{farmerStories.slice(0, 4).map((story) => <article className="farmer-story-card" key={story.farmerId}>
-      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}{story.isDemo ? "・DEMO" : ""}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未開始"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
+      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}{story.isDemo ? "・DEMO" : ""}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未建立"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
     </article>)}</div>}
     <div className="farmer-updates-news-heading"><div><span className="eyebrow">最新發布</span><h3>小農最新消息</h3></div><span>共 {news.length} 則</span></div>
     <FarmerNewsFeed news={news.slice(0, 6)} />
@@ -2634,7 +2701,7 @@ function LocalProjectStoryModal({
         </div>
         <div className="local-story-content">
           <section><span className="eyebrow">來自產地的故事</span><blockquote>「{story.quote}」</blockquote>{story.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</section>
-          <aside><h4>{isSupport ? "這份支持會帶來什麼" : "這次兌換支持了什麼"}</h4><div className="local-story-facts"><div><small>GreenFin 綠色經驗</small><strong>{item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未開始"}</strong></div><div><small>{isSupport ? "所需綠點" : "兌換綠點"}</small><strong>{item.points} 點</strong></div><div><small>{isSupport && item.targetPoints ? "募集進度" : "目前進度"}</small><strong>{isSupport && item.targetPoints ? `${(item.raisedPoints ?? 0).toLocaleString()}／${item.targetPoints.toLocaleString()} 點` : `${item.progress}%`}</strong></div><div><small>{isSupport ? "資源用途" : "配送方式"}</small><strong>{item.purpose}</strong></div><div><small>預期成果</small><strong>{item.impact}</strong></div></div><div className="progress"><span style={{ width: item.progress + "%" }} /></div><p>GreenFin 等級只代表可追溯綠色行動經驗，不是信用評分。{isSupport ? "完成支持後，專案進度與成果將同步到你的影響力收據。" : "完成兌換後，這筆綠點會形成在地訂單並支持小農持續生產。"}</p></aside>
+          <aside><h4>{isSupport ? "這份支持會帶來什麼" : "這次兌換支持了什麼"}</h4><div className="local-story-facts"><div><small>GreenFin 綠色經驗</small><strong>{item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未建立"}</strong></div><div><small>{isSupport ? "所需綠點" : "兌換綠點"}</small><strong>{item.points} 點</strong></div><div><small>{isSupport && item.targetPoints ? "募集進度" : "目前進度"}</small><strong>{isSupport && item.targetPoints ? `${(item.raisedPoints ?? 0).toLocaleString()}／${item.targetPoints.toLocaleString()} 點` : `${item.progress}%`}</strong></div><div><small>{isSupport ? "資源用途" : "配送方式"}</small><strong>{item.purpose}</strong></div><div><small>預期成果</small><strong>{item.impact}</strong></div></div><div className="progress"><span style={{ width: item.progress + "%" }} /></div><p>GreenFin 等級只代表可追溯綠色行動經驗，不是信用評分。{isSupport ? "完成支持後，專案進度與成果將同步到你的影響力收據。" : "完成兌換後，這筆綠點會形成在地訂單並支持小農持續生產。"}</p></aside>
         </div>
       </article>
       <div className="modal-actions local-story-actions"><button className="button button-secondary" onClick={onClose}>返回專案列表</button><button className="button button-primary" onClick={onAction} disabled={supportUnavailable}>{supportUnavailable ? supportStatusLabel : isSupport ? `支持 ${item.points} 點` : `兌換 ${item.points} 點`}{!supportUnavailable && <ArrowRight />}</button></div>
@@ -2821,8 +2888,12 @@ function AdminDashboard({
 
   async function viewActionProof(submission: ActionSubmission) {
     const needsViewRecord = submission.status === "pending" && !submission.proofViewedAt;
-    if (needsViewRecord && !window.confirm(`流程步驟確認\n\n即將開啟「${submission.title}」的證明文件，並記錄本次查看時間。\n\n確認查看後即可填寫審核說明。`)) return;
-    window.open(actionProofUrl(submission), "_blank", "noopener,noreferrer");
+    const isInvoice = submission.actionType === "invoice";
+    if (needsViewRecord && !window.confirm(isInvoice
+      ? `流程步驟確認\n\n請核對發票資料：${submission.note}\n\n確認已核對後即可填寫審核說明。`
+      : `流程步驟確認\n\n即將開啟「${submission.title}」的證明文件，並記錄本次查看時間。\n\n確認查看後即可填寫審核說明。`)) return;
+    // Invoices are manual entries without an uploaded file; the data is shown on the card.
+    if (!isInvoice) window.open(actionProofUrl(submission), "_blank", "noopener,noreferrer");
     if (needsViewRecord) {
       await save(
         "admin_mark_action_submission_viewed",
@@ -2883,7 +2954,7 @@ function AdminDashboard({
             <section className="admin-card"><header><div><h2>角色分布</h2><p>目前已建立的正式平台帳號</p></div><button onClick={() => setSection("accounts")}>管理帳號<ChevronRight /></button></header><div className="role-summary">
               {["consumer", "farmer", "institution"].map((item) => <article key={item}><b>{roleName(item)}</b><strong>{data.accounts.filter((account) => account.role === item).length}</strong><span>{data.accounts.filter((account) => account.role === item && account.status === "active").length} 個啟用</span></article>)}
             </div></section>
-            <section className="admin-card"><header><div><h2>最近管理操作</h2><p>所有數值與參數修改皆留下紀錄</p></div><button onClick={() => setSection("audit")}>完整紀錄<ChevronRight /></button></header><div className="audit-list compact">{data.auditLogs.slice(0, 5).map((log) => <article key={log.id}><span><FileCheck2 /></span><div><b>{actionName(log.action)}</b><small>{log.targetId}・{new Date(log.createdAt).toLocaleString("zh-TW")}</small></div></article>)}{data.auditLogs.length === 0 && <p className="admin-empty">尚無管理操作紀錄</p>}</div></section>
+            <section className="admin-card"><header><div><h2>最近管理操作</h2><p>所有數值與參數修改皆留下紀錄</p></div><button onClick={() => setSection("audit")}>完整紀錄<ChevronRight /></button></header><div className="audit-list compact">{data.auditLogs.slice(0, 5).map((log) => <article key={log.id}><span><FileCheck2 /></span><div><b>{actionName(log.action)}</b><small>{log.targetId}・{formatDbTime(log.createdAt)}</small></div></article>)}{data.auditLogs.length === 0 && <p className="admin-empty">尚無管理操作紀錄</p>}</div></section>
           </div>
         </>}
 
@@ -2989,7 +3060,7 @@ function AdminDashboard({
               return <article className={`action-review-card ${submission.status}`} key={submission.id}>
                 <div className="action-review-summary">
                   <span className={`submission-status ${submission.status}`}>{submission.status === "approved" ? "已核准" : submission.status === "rejected" ? "已退回" : "待審核"}</span>
-                  <div><small>{consumer?.displayName ?? submission.consumerId}・{new Date(submission.submittedAt).toLocaleString("zh-TW")}</small><h3>{submission.title}</h3><p>{submission.note}</p></div>
+                  <div><small>{consumer?.displayName ?? submission.consumerId}・{formatDbTime(submission.submittedAt)}</small><h3>{submission.title}</h3><p>{submission.note}</p></div>
                   <strong>+{submission.rewardPoints} 點</strong>
                 </div>
                 <div className="action-review-workflow" aria-label="審核流程">
@@ -2997,11 +3068,11 @@ function AdminDashboard({
                   <span className={noteReady || submission.status !== "pending" ? "done" : viewed ? "active" : ""}><b>{noteReady || submission.status !== "pending" ? <Check /> : "2"}</b>填寫說明</span>
                   <span className={submission.status !== "pending" ? "done" : noteReady ? "active" : ""}><b>{submission.status !== "pending" ? <Check /> : "3"}</b>完成審核</span>
                 </div>
-                <div className="action-review-file"><FileCheck2 /><div><b>{submission.fileName}</b><small>{submission.contentType}・{Math.max(1, Math.round(submission.fileSize / 1024)).toLocaleString()} KB{viewed && submission.proofViewedAt ? `・已查看 ${new Date(submission.proofViewedAt).toLocaleString("zh-TW")}` : "・尚未查看"}</small></div><button type="button" className="button button-secondary" onClick={() => viewActionProof(submission)}>{viewed ? "再次查看" : "查看並記錄"}<ArrowRight /></button></div>
+                <div className="action-review-file"><FileCheck2 /><div><b>{submission.fileName}</b><small>{submission.actionType === "invoice" ? "手動登錄發票資料・無附件" : `${submission.contentType}・${Math.max(1, Math.round(submission.fileSize / 1024)).toLocaleString()} KB`}{viewed && submission.proofViewedAt ? `・已查看 ${formatDbTime(submission.proofViewedAt)}` : "・尚未查看"}</small></div><button type="button" className="button button-secondary" onClick={() => viewActionProof(submission)}>{submission.actionType === "invoice" ? (viewed ? "已核對" : "核對並記錄") : viewed ? "再次查看" : "查看並記錄"}<ArrowRight /></button></div>
                 {submission.status === "pending" ? <div className="action-review-controls">
                   <label>審核說明（必填）<textarea rows={2} disabled={!viewed} value={reviewDrafts[submission.id] ?? ""} onChange={(event) => setReviewDrafts((current) => ({ ...current, [submission.id]: event.target.value }))} placeholder={viewed ? "請填寫核准依據或退回補件原因" : "請先查看證明文件"} /></label>
                   <div><button className="button button-secondary review-reject" disabled={busy || !viewed || !noteReady} onClick={() => void save("admin_review_action_submission", { submissionId: submission.id, decision: "rejected", reviewNote: reviewDrafts[submission.id] }, `${submission.title}已退回，未發放綠點`)}><X />退回補件</button><button className="button button-primary" disabled={busy || !viewed || !noteReady} onClick={() => void save("admin_review_action_submission", { submissionId: submission.id, decision: "approved", reviewNote: reviewDrafts[submission.id] }, `${submission.title}已核准並發放 ${submission.rewardPoints} 綠點`)}><Check />核准並發點</button></div>
-                </div> : <div className="action-review-result"><BadgeCheck /><span><b>{submission.status === "approved" ? "已完成核准與發點" : "已退回消費者補件"}</b><small>{submission.reviewNote || "未填寫審核說明"}{submission.reviewedAt ? `・${new Date(submission.reviewedAt).toLocaleString("zh-TW")}` : ""}</small></span></div>}
+                </div> : <div className="action-review-result"><BadgeCheck /><span><b>{submission.status === "approved" ? "已完成核准與發點" : "已退回消費者補件"}</b><small>{submission.reviewNote || "未填寫審核說明"}{submission.reviewedAt ? `・${formatDbTime(submission.reviewedAt)}` : ""}</small></span></div>}
               </article>;
             })}
             {sortedActionSubmissions.length === 0 && <div className="admin-empty-state"><Upload /><h3>目前沒有送審資料</h3><p>消費者從「綠點來源」上傳證明後，會顯示在此處。</p></div>}
@@ -3101,7 +3172,7 @@ function AdminDashboard({
 
         {section === "parameters" && <section className="admin-card admin-table-card"><header><div><h2>平台營運參數</h2><p>以下設定由管理員控制，儲存後寫入後端資料庫。</p></div></header><div className="parameter-grid">{data.parameters.map((parameter) => <article key={parameter.parameterKey}><span><Monitor /></span><div><h3>{parameter.displayName}</h3><p>{parameter.description}</p><small>{parameter.parameterKey}</small></div><label>設定值<div><input value={parameterDrafts[parameter.parameterKey] ?? parameter.value} onChange={(event) => setParameterDrafts((current) => ({ ...current, [parameter.parameterKey]: event.target.value }))} /><em>{parameter.unit}</em></div></label><button className="button button-primary" disabled={busy} onClick={() => void save("admin_update_parameter", { parameterKey: parameter.parameterKey, value: parameterDrafts[parameter.parameterKey] ?? parameter.value }, `${parameter.displayName}已儲存`)}>儲存參數</button></article>)}</div></section>}
 
-        {section === "audit" && <section className="admin-card admin-table-card"><header><div><h2>管理員操作紀錄</h2><p>保留帳號、內容、數量與參數的修改軌跡。</p></div></header><div className="audit-list">{data.auditLogs.map((log) => <article key={log.id}><span><FileCheck2 /></span><div><b>{actionName(log.action)}</b><p>{log.targetType}・{log.targetId}</p><small>{new Date(log.createdAt).toLocaleString("zh-TW")}</small></div><code>{JSON.stringify(log.detail)}</code></article>)}{data.auditLogs.length === 0 && <p className="admin-empty">儲存第一筆設定後，紀錄會顯示在這裡。</p>}</div></section>}
+        {section === "audit" && <section className="admin-card admin-table-card"><header><div><h2>管理員操作紀錄</h2><p>保留帳號、內容、數量與參數的修改軌跡。</p></div></header><div className="audit-list">{data.auditLogs.map((log) => <article key={log.id}><span><FileCheck2 /></span><div><b>{actionName(log.action)}</b><p>{log.targetType}・{log.targetId}</p><small>{formatDbTime(log.createdAt)}</small></div><code>{JSON.stringify(log.detail)}</code></article>)}{data.auditLogs.length === 0 && <p className="admin-empty">儲存第一筆設定後，紀錄會顯示在這裡。</p>}</div></section>}
       </main>
 
       <nav className="admin-mobile-nav">
@@ -3114,6 +3185,7 @@ function AdminDashboard({
         <button className={section === "system" ? "active" : ""} onClick={() => setSection("system")}><ScanLine />API</button>
         <button className={section === "parameters" ? "active" : ""} onClick={() => setSection("parameters")}><Monitor />參數</button>
         <button className={section === "audit" ? "active" : ""} onClick={() => setSection("audit")}><FileCheck2 />紀錄</button>
+        <button onClick={onExit}><LogOut />登出</button>
       </nav>
     </div>
   );
@@ -3268,7 +3340,7 @@ function ConsumerSettingsPage({ settings, busy, onSave }: { settings: ConsumerSe
       <form onSubmit={(event) => { event.preventDefault(); void onSave(draft); }}>
         <header className="settings-page-header">
           <div><span><Settings /></span><div><small>ACCOUNT SETTINGS</small><h2>設定</h2><p>以下資料只屬於目前登入帳戶，可隨時更新。</p></div></div>
-          {settings.updatedAt && <small>上次更新：{new Date(settings.updatedAt).toLocaleString("zh-TW")}</small>}
+          {settings.updatedAt && <small>上次更新：{formatDbTime(settings.updatedAt)}</small>}
         </header>
 
         <article className="settings-section">
@@ -3425,7 +3497,7 @@ function ConsumerDashboard({
             <div className="section-heading"><div><span className="eyebrow">送審紀錄</span><h3>行動證明進度</h3></div></div>
             {actionSubmissions.slice(0, 4).map((submission) => <article key={submission.id}>
               <span className={`submission-status ${submission.status}`}>{submission.status === "approved" ? "已核准" : submission.status === "rejected" ? "已退回" : "待審核"}</span>
-              <div><b>{submission.title}</b><small>{submission.fileName}・{new Date(submission.submittedAt).toLocaleString("zh-TW")}</small>{submission.reviewNote && <p>{submission.reviewNote}</p>}</div>
+              <div><b>{submission.title}</b><small>{submission.fileName}・{formatDbTime(submission.submittedAt)}</small>{submission.reviewNote && <p>{submission.reviewNote}</p>}</div>
               <strong>+{submission.rewardPoints} 點</strong>
             </article>)}
           </div>}
@@ -3478,7 +3550,7 @@ function ConsumerDashboard({
             key={entry.id}
             icon={entry.sourceType.includes("transport") ? Truck : entry.sourceType.includes("invoice") || entry.sourceType.includes("ebill") ? Receipt : entry.sourceType.includes("support") ? HeartHandshake : entry.sourceType.includes("redeem") || entry.sourceType.includes("order") ? ShoppingBasket : entry.sourceType.includes("cup") ? Leaf : Store}
             title={entry.description}
-            note={`${entry.sourceType}・${entry.createdAt}`}
+            note={`${ledgerSourceLabels[entry.sourceType] ?? entry.sourceType}・${formatDbTime(entry.createdAt, { hour12: false })}`}
             value={`${entry.deltaPoints > 0 ? "+" : ""}${entry.deltaPoints.toLocaleString()} 點`}
           />) : <Activity icon={Leaf} title="尚無點數紀錄" note="完成綠色行動後會建立一點一履歷" value="0 點" />}
         </div>
@@ -3570,6 +3642,7 @@ function LocalSupportDashboard({
   onRegister: (actionId: string) => void;
   onVisit: (address: string, title: string) => void;
 }) {
+  const [renderedAt] = useState(() => Date.now());
   const activeLocationCity = Object.keys(taiwanLocationOptions).find((city) => location.startsWith(city)) ?? "台北市";
   const activeLocationDistrict = location.slice(activeLocationCity.length) || taiwanLocationOptions[activeLocationCity][0];
   const [draftCity, setDraftCity] = useState(activeLocationCity);
@@ -3686,7 +3759,8 @@ function LocalSupportDashboard({
           <div className="local-action-grid">
             {nearbyOpportunities.map((item) => {
               const registered = item.kind === "action" && registeredActionIds.includes(item.id);
-              return <article key={`${item.kind}-${item.id}`} className="local-action-card"><div><span className="eyebrow">{item.kind === "action" ? "綠色行動" : "合作優惠"}・{item.city}{item.district}・距離你約 {item.actualDistance} 公里</span><h3>{item.title}</h3>{item.kind === "action" && <span className="local-action-time"><CalendarDays />活動時間：{formatActivitySchedule(item.eventStart, item.eventEnd)}</span>}<p>{item.description}</p><div className="local-action-detail"><b>{item.provider}</b><span><MapPin />{item.address}</span><small>{item.details}</small>{item.kind === "action" && <em>完成活動後可申請 +{item.rewardPoints} 綠點</em>}</div></div><button className={`button ${item.kind === "action" ? "button-primary" : "button-secondary"}`} disabled={registered} onClick={() => item.kind === "action" ? onRegister(item.id) : onVisit(item.address, item.title)}>{item.kind === "action" ? registered ? "已完成報名" : "填寫資料並報名" : "前往優惠地點"}</button></article>;
+              const ended = item.kind === "action" && "eventEnd" in item && Boolean(item.eventEnd) && new Date(item.eventEnd).valueOf() < renderedAt;
+              return <article key={`${item.kind}-${item.id}`} className="local-action-card"><div><span className="eyebrow">{item.kind === "action" ? "綠色行動" : "合作優惠"}・{item.city}{item.district}・距離你約 {item.actualDistance} 公里</span><h3>{item.title}</h3>{item.kind === "action" && <span className="local-action-time"><CalendarDays />活動時間：{formatActivitySchedule(item.eventStart, item.eventEnd)}</span>}<p>{item.description}</p><div className="local-action-detail"><b>{item.provider}</b><span><MapPin />{item.address}</span><small>{item.details}</small>{item.kind === "action" && <em>完成活動後可申請 +{item.rewardPoints} 綠點</em>}</div></div><button className={`button ${item.kind === "action" ? "button-primary" : "button-secondary"}`} disabled={registered || ended} onClick={() => item.kind === "action" ? onRegister(item.id) : onVisit(item.address, item.title)}>{item.kind === "action" ? registered ? "已完成報名" : ended ? "活動已結束" : "填寫資料並報名" : "前往優惠地點"}</button></article>;
             })}
           </div>
         </Panel>
@@ -3705,9 +3779,7 @@ function LocalSupportDashboard({
 
 function formatShipmentTime(value: string) {
   if (!value) return "尚未完成";
-  const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`;
-  const date = new Date(normalized);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-TW", { hour12: false });
+  return formatDbTime(value, { hour12: false });
 }
 
 function FarmerContentCenter({ story, news, busy, onUpload, onSaveStory, onSaveNews }: {
@@ -3795,6 +3867,11 @@ function FarmerContentCenter({ story, news, busy, onUpload, onSaveStory, onSaveN
 
 function FarmerProductsPage({ products, orders, changeRequests, onAdd, onEdit, onAdvanceOrder, onReviewChange }: { products: FarmerProduct[]; orders: BackendSnapshot["orders"]; changeRequests: BackendSnapshot["changeRequests"]; onAdd: () => void; onEdit: (id: string) => void; onAdvanceOrder: (values: { orderId: string; carrier?: string; trackingNumber?: string; fulfillmentNote?: string }) => Promise<boolean>; onReviewChange: (requestId: string, decision: "approved" | "rejected") => void }) {
   const totalStock = products.reduce((sum, item) => sum + item.stock, 0);
+  const currentMonth = localDateInput().slice(0, 7);
+  const monthOrders = orders.filter((order) => localDateInput(parseDbTime(order.createdAt)).slice(0, 7) === currentMonth);
+  const monthOrderPoints = monthOrders.reduce((sum, order) => sum + order.points, 0);
+  const missingProofCount = products.filter((item) => !item.proof || item.proof.includes("待補")).length;
+  const traceabilityPercent = products.length ? Math.round((products.length - missingProofCount) / products.length * 100) : 0;
   const orderChangeRequests = changeRequests.filter((request) => request.requestType === "order");
   const [shipmentDrafts, setShipmentDrafts] = useState<Record<string, { carrier: string; trackingNumber: string; fulfillmentNote: string }>>({});
   const [updatingOrderId, setUpdatingOrderId] = useState("");
@@ -3835,7 +3912,7 @@ function FarmerProductsPage({ products, orders, changeRequests, onAdd, onEdit, o
 
   return (
     <div className="dashboard-grid">
-      <div className="metrics span-12"><Metric icon={ShoppingBasket} value={`${products.length} 款`} label="已上架商品" delta="可立即編輯" /><Metric icon={PackageCheck} value={`${totalStock} 件`} label="可售庫存" delta="即時更新" /><Metric icon={HandCoins} value="3,680 點" label="本月收到支持" delta="+18%" /><Metric icon={FileCheck2} value="92%" label="履歷完整度" delta="待補 1 項" /></div>
+      <div className="metrics span-12"><Metric icon={ShoppingBasket} value={`${products.length} 款`} label="已上架商品" delta="可立即編輯" /><Metric icon={PackageCheck} value={`${totalStock} 件`} label="可售庫存" delta="即時更新" /><Metric icon={HandCoins} value={`${monthOrderPoints.toLocaleString()} 點`} label="本月訂單綠點" delta={`${monthOrders.length} 筆訂單`} /><Metric icon={FileCheck2} value={`${traceabilityPercent}%`} label="履歷完整度" delta={missingProofCount ? `待補 ${missingProofCount} 項` : "已完整"} /></div>
       <Panel className="span-12 subpage-primary" title="商品數量與點數" note="由小農自行管理商品兌換綠點、庫存數量與上架內容" action={<button className="button button-primary" onClick={onAdd}><ShoppingBasket />上架新商品</button>}>
         <div className="project-list project-list-expanded">{products.map((item) => <Project key={item.id} image={item.image} title={item.title} note={`${item.points.toLocaleString()} 綠點・${item.proof}・庫存 ${item.stock} ${item.unit}`} progress={100} button="編輯點數與庫存" onClick={() => onEdit(item.id)} onLearnMore={() => onEdit(item.id)} gold />)}</div>
       </Panel>
@@ -3938,7 +4015,7 @@ function FarmerDashboard({
   const pendingOrders = orders.filter((order) => order.stage < 3);
   const greenFinProgress = greenFin?.progressPercent ?? 0;
   const greenFinLevel = greenFin?.level ?? "L0";
-  const greenFinLevelLabel = greenFin?.levelLabel ?? "尚未開始";
+  const greenFinLevelLabel = greenFin?.levelLabel ?? "尚未建立";
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthlyOrders = orders.filter((order) => order.createdAt.slice(0, 7) === currentMonth).length;
   return (
@@ -4130,7 +4207,7 @@ function ConsumerInvoicePage({
     <div className="dashboard-grid">
       <Panel className="span-8 subpage-primary" title="新增消費證明" note="可手動填寫完整資料，或使用相機掃描電子／傳統發票">
         {stage === "success" ? (
-          <Success title={`驗證完成，獲得 ${rewardPoints} 綠點`} text="這筆友善農產消費已通過平台驗證，綠點已加入你的錢包。">
+          <Success title="發票已送出，等待審核" text={`平台管理員核對發票資料後才會發放 ${rewardPoints} 綠點，審核結果會顯示在綠點紀錄。`}>
             {invoice && <div className="receipt-box invoice-verification-summary"><Row label="已送出發票" value={invoice.invoiceNumber} /><Row label="消費日期" value={invoice.transactionDate} /><Row label="消費金額" value={`NT$ ${invoice.amount.toLocaleString()}`} /><Row label="登錄方式" value={invoice.mode === "manual" ? "手動新增" : "掃描發票"} /></div>}
             <button className="button button-primary" onClick={onReset}>再新增一張發票</button>
           </Success>
@@ -4140,8 +4217,8 @@ function ConsumerInvoicePage({
           </Success>
         ) : <InvoiceEntryContent onVerify={onVerify} />}
       </Panel>
-      <Panel className="span-4" title="取得綠點流程" note="資料確認後自動加入錢包">
-        <div className="subpage-steps"><div><span>1</span><p><b>選擇登錄方式</b><small>手動新增或掃描發票</small></p></div><div><span>2</span><p><b>確認發票資料</b><small>核對日期、號碼與消費金額</small></p></div><div><span>3</span><p><b>資格驗證</b><small>確認符合綠色消費條件</small></p></div><div><span>4</span><p><b>綠點入帳</b><small>支持小農或兌換商品</small></p></div></div>
+      <Panel className="span-4" title="取得綠點流程" note="管理員審核通過後加入錢包">
+        <div className="subpage-steps"><div><span>1</span><p><b>選擇登錄方式</b><small>手動新增或掃描發票</small></p></div><div><span>2</span><p><b>確認發票資料</b><small>核對日期、號碼與消費金額</small></p></div><div><span>3</span><p><b>管理員審核</b><small>核對發票與綠色消費條件</small></p></div><div><span>4</span><p><b>綠點入帳</b><small>支持小農或兌換商品</small></p></div></div>
       </Panel>
     </div>
   );
@@ -4178,8 +4255,8 @@ function ImpactReceiptDetail({ item }: { item: LocalProject }) {
         <section>
           <h4>{isRedeem ? "訂單與影響里程碑" : "專案里程碑"}</h4>
           <div className="receipt-timeline">
-            <div className="done"><span><Check /></span><p><b>{isRedeem ? "商品兌換完成" : "綠點支持完成"}</b><small>2026/07/31</small></p></div>
-            <div className="active"><span>2</span><p><b>{isRedeem ? "小農備貨與產地配送" : "採購與改善進行中"}</b><small>{isRedeem ? "可至兌換訂單查看最新進度" : "預計 2026/08 完成"}</small></p></div>
+            <div className="done"><span><Check /></span><p><b>{isRedeem ? "商品兌換完成" : "綠點支持完成"}</b><small>{receiptIssuedLabel(item)}</small></p></div>
+            <div className="active"><span>2</span><p><b>{isRedeem ? "小農備貨與產地配送" : "採購與改善進行中"}</b><small>{isRedeem ? "可至兌換訂單查看最新進度" : (item.completionDate ? `預計 ${item.completionDate} 完成` : "依專案進度更新")}</small></p></div>
             <div><span>3</span><p><b>{isRedeem ? "地方成果持續累積" : "成果驗證與回報"}</b><small>{isRedeem ? "訂單收入支持下一批友善生產" : "完成後更新成果透明度"}</small></p></div>
           </div>
         </section>
@@ -4351,7 +4428,13 @@ type GreenFinDocumentDetail = {
   review?: { actorId: string; createdAt: string; decision: "APPROVED" | "REJECTED"; reviewNote: string } | null;
   reviewState?: "PENDING" | "APPROVED" | "REJECTED" | null;
 };
-type GreenFinActionRow = { id: string; dimension: string; action_level: string; description: string; action_date: string; is_active: number };
+// Date inputs need the viewer's local calendar day; toISOString() is UTC and lags Taiwan by 8 hours.
+function localDateInput(date = new Date()) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
+type GreenFinActionRow = { id: string; dimension: string; action_level: string; description: string; action_date: string; is_active: number; evidence_record_ids_json?: string };
+type GreenFinEvidenceRecord = { id: string; domain: string; source_level: string; original_name: string };
 type GreenFinResultSummary = Omit<GreenFinProgressSummary, "experienceTotal"> & {
   total: number;
   dimensions: Record<string, number>;
@@ -4364,6 +4447,9 @@ type GreenFinAuthorizationRow = { id: string; institution_id: string; institutio
 type GreenFinInstitution = { id: string; display_name: string };
 type GreenFinBankCaseRow = { authorization_id: string; farmer_id: string; farmer_name: string; purpose: string; data_scope_json: string; start_at: string; expire_at: string; status: string; revoked_at?: string | null; case_id?: string | null; case_number?: string | null; case_status?: string | null; notes?: string | null };
 type GreenFinBankDetail = GreenFinResultPayload & { authorization: { id: string; farmer_id: string; purpose: string; start_at: string; expire_at: string; scopes: string[] }; farmer?: { id: string; display_name: string; city: string; district: string }; bankCase?: { id: string; case_number: string; status: string; notes: string } | null };
+const greenFinIndicatorLabels: Record<string, string> = { completeness: "資料完整度", credibility: "資料可信度", businessMaturity: "經營成熟度", greenMaturity: "綠色成熟度" };
+const greenFinScopeLabels: Record<string, string> = { EXPERIENCE: "綠色經驗值", INDICATORS: "四大指標", DATA_HEALTH: "Data Health" };
+
 const greenFinDomains = [
   ["IDENTITY", "身分與資格"], ["LAND_CROP", "土地與作物"], ["TRANSACTION", "經營與交易"],
   ["INPUT_EQUIPMENT", "投入與設備"], ["GREEN_ACTION", "綠色行動"], ["CERTIFICATION", "認證與治理"], ["LOAN_PURPOSE", "申貸用途"],
@@ -4388,14 +4474,15 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
   const [section, setSection] = useState<"dashboard" | "documents" | "actions" | "experience" | "indicators" | "health" | "authorizations">("dashboard");
   const [documents, setDocuments] = useState<GreenFinDocumentRow[]>([]);
   const [actions, setActions] = useState<GreenFinActionRow[]>([]);
+  const [evidenceRecords, setEvidenceRecords] = useState<GreenFinEvidenceRecord[]>([]);
   const [results, setResults] = useState<GreenFinResultPayload>({ experience: [], indicators: [], dataHealth: [] });
   const [authorizations, setAuthorizations] = useState<GreenFinAuthorizationRow[]>([]);
   const [institutions, setInstitutions] = useState<GreenFinInstitution[]>([]);
   const [domain, setDomain] = useState("GREEN_ACTION");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [actionDraft, setActionDraft] = useState({ dimension: "減量", actionLevel: "BASIC", description: "", actionDate: new Date().toISOString().slice(0, 10) });
-  const [authorizationDraft, setAuthorizationDraft] = useState(() => ({ institutionId: "", purpose: "申請授信時提供 GreenFin 永續資料作為補充資訊", dataScope: ["EXPERIENCE", "INDICATORS", "DATA_HEALTH"], startAt: new Date().toISOString().slice(0, 10), expireAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) }));
+  const [actionDraft, setActionDraft] = useState({ dimension: "減量", actionLevel: "BASIC", description: "", actionDate: localDateInput(), evidenceRecordIds: [] as string[] });
+  const [authorizationDraft, setAuthorizationDraft] = useState(() => ({ institutionId: "", purpose: "申請授信時提供 GreenFin 永續資料作為補充資訊", dataScope: ["EXPERIENCE", "INDICATORS", "DATA_HEALTH"], startAt: localDateInput(), expireAt: localDateInput(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)) }));
   const [working, setWorking] = useState(false);
   const [documentDetail, setDocumentDetail] = useState<GreenFinDocumentDetail | null>(null);
   const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
@@ -4409,7 +4496,10 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
     ]);
     if (documentsResponse.ok) setDocuments(((await documentsResponse.json()) as { documents: GreenFinDocumentRow[] }).documents);
     if (resultsResponse.ok) setResults(await resultsResponse.json() as GreenFinResultPayload);
-    if (actionsResponse.ok) setActions(((await actionsResponse.json()) as { actions: GreenFinActionRow[] }).actions);
+    if (actionsResponse.ok) {
+      const payload = await actionsResponse.json() as { actions: GreenFinActionRow[]; evidenceRecords?: GreenFinEvidenceRecord[] };
+      setActions(payload.actions); setEvidenceRecords(payload.evidenceRecords ?? []);
+    }
     if (authorizationsResponse.ok) {
       const payload = await authorizationsResponse.json() as { authorizations: GreenFinAuthorizationRow[]; institutions: GreenFinInstitution[] };
       setAuthorizations(payload.authorizations); setInstitutions(payload.institutions);
@@ -4506,16 +4596,16 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
   }
   return <div className="dashboard-grid">
     <Panel className="span-12 subpage-primary" title="GreenFin 綠色數位履歷" note="Evidence First・Rule Driven・Explainable；不等同信用評分或自動核貸">
-      <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health", "authorizations"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={() => setSection(item)}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health", authorizations: "銀行授權" }[item]}</button>)}</div>
+      <div className="filter-row">{(["dashboard", "documents", "actions", "experience", "indicators", "health", "authorizations"] as const).map((item) => <button key={item} className={`filter-pill ${section === item ? "active" : ""}`} onClick={(event) => { setSection(item); event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" }); }}>{{ dashboard: "總覽", documents: "文件與 OCR", actions: "綠色行動", experience: "綠色經驗值", indicators: "四大指標", health: "Data Health", authorizations: "銀行授權" }[item]}</button>)}</div>
     </Panel>
     {section === "dashboard" && <section className="greenfin-workspace-summary span-12">
-      <div className="greenfin-level-card"><span>GreenFin 綠色經驗等級</span><strong>{summary?.level ?? "L0"}</strong><b>{summary?.levelLabel ?? "尚未開始"}</b><small>{experienceTotal.toLocaleString()}／{summary?.totalLimit ?? 1000} 經驗值</small></div>
+      <div className="greenfin-level-card"><span>GreenFin 綠色經驗等級</span><strong>{summary?.level ?? "L0"}</strong><b>{summary?.levelLabel ?? "尚未建立"}</b><small>{experienceTotal.toLocaleString()}／{summary?.totalLimit ?? 1000} 經驗值</small></div>
       <div className="greenfin-progress-card"><div><span>數位履歷建置進度</span><strong>{summary?.progressPercent ?? 0}%</strong></div><div className="progress"><span style={{ width: `${summary?.progressPercent ?? 0}%` }} /></div><p>{summary?.nextAction ?? "上傳第一份原始文件"}</p><small>{summary?.completedStageCount ?? 0}／{summary?.totalStageCount ?? 5} 階段完成</small><div className="greenfin-progress-actions"><button className="button button-primary" onClick={() => { setDocumentDetail(null); setSection("documents"); }}><Upload />上傳文件</button><button className="button button-secondary" onClick={openPendingDocuments}><FileCheck2 />待補件 {pendingDocuments.length}</button></div></div>
       <div className="greenfin-stage-list">{(summary?.stages ?? []).map((stage) => { const next = stageAction(stage.id); return <Evidence key={stage.id} title={stage.label} note={stage.detail} done={stage.complete} actionLabel={next.label} onAction={next.action} />; })}</div>
     </section>}
-    {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><strong className="greenfin-inline-level">{summary?.level ?? "L0"}・{summary?.levelLabel ?? "尚未開始"}</strong><small>規則版本：{summary?.ruleVersion ?? "GREENFIN_DEMO_V1"}</small>{summary?.nextLevel && <p className="greenfin-next-level">距離 {summary.nextLevel} 尚差 {summary.pointsToNextLevel} 經驗值</p>}</Panel>}
+    {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><strong className="greenfin-inline-level">{summary?.level ?? "L0"}・{summary?.levelLabel ?? "尚未建立"}</strong><small>規則版本：{summary?.ruleVersion ?? "GREENFIN_DEMO_V1"}</small>{summary?.nextLevel && <p className="greenfin-next-level">距離 {summary.nextLevel} 尚差 {summary.pointsToNextLevel} 經驗值</p>}</Panel>}
     {section === "experience" && <Panel className="span-8" title="四構面累積" note="各構面獨立累積，不合成信用分數"><div className="greenfin-dimension-grid">{Object.entries(summary?.dimensions ?? { 減量: 0, 增匯: 0, 循環: 0, 綠色治理: 0 }).map(([dimension, value]) => <article key={dimension}><div><span>{dimension}</span><strong>{value.toLocaleString()}／{summary?.annualLimitPerDimension ?? 250}</strong></div><div className="progress"><span style={{ width: `${Math.min(100, value / (summary?.annualLimitPerDimension ?? 250) * 100)}%` }} /></div></article>)}</div><p className="fine-print">有效經驗值＝行為基礎值 × 來源認列比例；由後端依規則版本計算。</p></Panel>}
-    {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
+    {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={greenFinIndicatorLabels[String(item.indicator_type)] ?? String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
     {(section === "dashboard" || section === "health") && <Panel className="span-4" title="Data Health" note="GRAY／RED／YELLOW／GREEN"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={String(item.status)} done={item.status === "GREEN"} />) : <p className="empty-copy">尚未計算資料健康度。</p>}</div></Panel>}
     {section === "documents" && <>
       <Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式">
@@ -4535,8 +4625,8 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
         <div className="greenfin-document-actions"><button className="button button-secondary" onClick={() => setDocumentDetail(null)}>關閉詳情</button>{!(["PENDING", "APPROVED"] as const).some((status) => status === documentDetail.reviewState) && <button className="button button-secondary" disabled={working} onClick={() => void processDocument("/api/greenfin/documents", "PATCH", { documentId: documentDetail.document.id, reviewRequest: true }, "文件已送交政府端審批", documentDetail.document.id)}>{documentDetail.reviewState === "REJECTED" ? "重新送交政府審批" : "送交政府審批"}</button>}{documentDetail.document.status === "OCR_COMPLETED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/documents", "PUT", { documentId: documentDetail.document.id, corrections: fieldDraft }, "補件欄位已確認", documentDetail.document.id)}>確認欄位並送出補件</button>}{documentDetail.document.status === "FIELDS_CONFIRMED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/documents", "PATCH", { documentId: documentDetail.document.id }, "文件已完成標準化", documentDetail.document.id)}>執行標準化</button>}{documentDetail.document.status === "NORMALIZED" && <button className="button button-primary" disabled={working} onClick={() => void processDocument("/api/greenfin/verification", "POST", { documentId: documentDetail.document.id }, "來源核驗與異常檢查完成", documentDetail.document.id)}>執行來源核驗</button>}{documentDetail.document.status === "VERIFIED" && <span className="greenfin-complete-label"><CheckCircle2 />已完成核驗</span>}</div>
       </Panel>}
     </>}
-    {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；實際認列仍依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "" }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim()}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}`} done={Boolean(item.is_active)} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
-    {section === "authorizations" && <><Panel className="span-5" title="建立機構授權" note="授權可隨時撤銷；單次期間最長 366 天"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/authorizations", "POST", authorizationDraft, "GreenFin 機構授權已建立"); }}><label>授權機構<select required value={authorizationDraft.institutionId} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, institutionId: event.target.value }))}><option value="">請選擇機構</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label><label>授權目的<textarea required maxLength={500} value={authorizationDraft.purpose} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, purpose: event.target.value }))} /></label><div className="form-grid"><label>開始日期<input type="date" value={authorizationDraft.startAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, startAt: event.target.value }))} /></label><label>到期日期<input type="date" min={authorizationDraft.startAt} value={authorizationDraft.expireAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, expireAt: event.target.value }))} /></label></div><fieldset><legend>資料範圍</legend>{[["EXPERIENCE", "綠色經驗值"], ["INDICATORS", "四大指標"], ["DATA_HEALTH", "Data Health"]].map(([value, label]) => <label key={value}><input type="checkbox" checked={authorizationDraft.dataScope.includes(value)} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, dataScope: event.target.checked ? [...current.dataScope, value] : current.dataScope.filter((scope) => scope !== value) }))} />{label}</label>)}</fieldset><button className="button button-primary button-block" disabled={working || !authorizationDraft.institutionId || !authorizationDraft.dataScope.length}>建立限期授權</button></form></Panel><Panel className="span-7" title="授權紀錄" note="機構、資料範圍、期間與撤銷狀態均由後端檢核"><div className="evidence-list">{authorizations.length ? authorizations.map((item) => { const scopes = JSON.parse(item.data_scope_json) as string[]; const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.expire_at).valueOf() > currentTime; return <article className="evidence-item" key={item.id}><div><strong>{item.institution_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・{item.start_at.slice(0, 10)} 至 {item.expire_at.slice(0, 10)}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效" : item.status === "REVOKED" ? "已撤銷" : "已到期"}</span>{active && <button type="button" className="text-button" onClick={() => { if (window.confirm(`確認撤銷對 ${item.institution_name} 的 GreenFin 授權？`)) void mutate(`/api/greenfin/authorizations?authorizationId=${encodeURIComponent(item.id)}`, "DELETE", {}, "GreenFin 授權已撤銷"); }}>撤銷</button>}</div></article>; }) : <p className="empty-copy">尚未建立任何機構授權。</p>}</div></Panel></>}
+    {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；須附已核驗佐證，實際認列依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "", evidenceRecordIds: [] }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={localDateInput()} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><fieldset className="greenfin-evidence-picker"><legend>佐證文件（必選，須已完成核驗）</legend>{evidenceRecords.length ? evidenceRecords.map((record) => <label key={record.id} className="greenfin-evidence-option"><input type="checkbox" checked={actionDraft.evidenceRecordIds.includes(record.id)} onChange={(event) => setActionDraft((current) => ({ ...current, evidenceRecordIds: event.target.checked ? [...current.evidenceRecordIds, record.id] : current.evidenceRecordIds.filter((id) => id !== record.id) }))} /><span>{record.original_name}<small>{greenFinDomains.find(([key]) => key === record.domain)?.[1] ?? record.domain}・{record.source_level}</small></span></label>) : <p className="empty-copy">尚無已核驗文件，請先到「文件與 OCR」完成上傳與來源核驗。</p>}</fieldset><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim() || !actionDraft.evidenceRecordIds.length}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}${(JSON.parse(item.evidence_record_ids_json || "[]") as string[]).length ? "" : "・無佐證，不認列經驗值"}`} done={Boolean(item.is_active) && (JSON.parse(item.evidence_record_ids_json || "[]") as string[]).length > 0} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
+    {section === "authorizations" && <><Panel className="span-5" title="建立機構授權" note="授權可隨時撤銷；單次期間最長 366 天"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/authorizations", "POST", authorizationDraft, "GreenFin 機構授權已建立"); }}><label>授權機構<select required value={authorizationDraft.institutionId} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, institutionId: event.target.value }))}><option value="">請選擇機構</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label><label>授權目的<textarea required maxLength={500} value={authorizationDraft.purpose} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, purpose: event.target.value }))} /></label><div className="form-grid"><label>開始日期<input type="date" value={authorizationDraft.startAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, startAt: event.target.value }))} /></label><label>到期日期<input type="date" min={authorizationDraft.startAt} value={authorizationDraft.expireAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, expireAt: event.target.value }))} /></label></div><fieldset><legend>資料範圍</legend>{[["EXPERIENCE", "綠色經驗值"], ["INDICATORS", "四大指標"], ["DATA_HEALTH", "Data Health"]].map(([value, label]) => <label key={value}><input type="checkbox" checked={authorizationDraft.dataScope.includes(value)} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, dataScope: event.target.checked ? [...current.dataScope, value] : current.dataScope.filter((scope) => scope !== value) }))} />{label}</label>)}</fieldset><button className="button button-primary button-block" disabled={working || !authorizationDraft.institutionId || !authorizationDraft.dataScope.length}>建立限期授權</button></form></Panel><Panel className="span-7" title="授權紀錄" note="機構、資料範圍、期間與撤銷狀態均由後端檢核"><div className="evidence-list">{authorizations.length ? authorizations.map((item) => { const scopes = JSON.parse(item.data_scope_json) as string[]; const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.expire_at).valueOf() > currentTime; return <article className="evidence-item" key={item.id}><div><strong>{item.institution_name}</strong><small>{item.purpose}</small><small>{scopes.map((scope) => greenFinScopeLabels[scope] ?? scope).join("・")}・{item.start_at.slice(0, 10)} 至 {item.expire_at.slice(0, 10)}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效" : item.status === "REVOKED" ? "已撤銷" : "已到期"}</span>{active && <button type="button" className="text-button" onClick={() => { if (window.confirm(`確認撤銷對 ${item.institution_name} 的 GreenFin 授權？`)) void mutate(`/api/greenfin/authorizations?authorizationId=${encodeURIComponent(item.id)}`, "DELETE", {}, "GreenFin 授權已撤銷"); }}>撤銷</button>}</div></article>; }) : <p className="empty-copy">尚未建立任何機構授權。</p>}</div></Panel></>}
     {section !== "documents" && section !== "actions" && section !== "authorizations" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
   </div>;
 }
@@ -4645,7 +4735,12 @@ function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: stri
     finally { setWorking(false); }
   }
 
-  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => [...new Map(rows.map((row) => [String(row[key]), row])).values()];
+  // API rows are ordered newest first, so keep the first row per key.
+  const latestBy = (rows: Array<Record<string, unknown>>, key: string) => {
+    const latest = new Map<string, Record<string, unknown>>();
+    for (const row of rows) if (!latest.has(String(row[key]))) latest.set(String(row[key]), row);
+    return [...latest.values()];
+  };
   const indicators = latestBy(detail?.indicators ?? [], "indicator_type");
   const health = latestBy(detail?.dataHealth ?? [], "domain");
   const experience = detail?.experience ?? [];
@@ -4668,9 +4763,9 @@ function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: stri
       <div className="system-mode-banner"><span><LockKeyhole /></span><div><b>僅作為授信補充資訊</b><p>不提供任何授信決策、風險機率、融資條件或單一綜合分數。</p></div></div>
     </Panel>
     <Panel className="span-12" title="小農授權清單" note={`${cases.length} 筆與目前機構相關的授權`}>
-      {cases.length ? <div className="evidence-list">{cases.map((item) => { const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.start_at).valueOf() <= currentTime && new Date(item.expire_at).valueOf() > currentTime; const scopes = JSON.parse(item.data_scope_json) as string[]; return <article className="evidence-item" key={item.authorization_id}><div><strong>{item.farmer_name}</strong><small>{item.purpose}</small><small>{scopes.join("・")}・有效至 {item.expire_at.slice(0, 10)}{item.case_number ? `・案件 ${item.case_number}` : ""}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效授權" : item.status === "REVOKED" ? "已撤銷" : "未生效／已到期"}</span><button className="text-button" disabled={!active || working} onClick={() => void openAuthorizedData(item)}>{working && selectedAuthorizationId === item.authorization_id ? "讀取中…" : item.case_id ? "檢視授權資料" : "建立並開啟案件"}</button></div></article>; })}</div> : <p className="empty-copy">目前沒有小農授權給此機構。</p>}
+      {cases.length ? <div className="evidence-list">{cases.map((item) => { const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.start_at).valueOf() <= currentTime && new Date(item.expire_at).valueOf() > currentTime; const scopes = JSON.parse(item.data_scope_json) as string[]; return <article className="evidence-item" key={item.authorization_id}><div><strong>{item.farmer_name}</strong><small>{item.purpose}</small><small>{scopes.map((scope) => greenFinScopeLabels[scope] ?? scope).join("・")}・有效至 {item.expire_at.slice(0, 10)}{item.case_number ? `・案件 ${item.case_number}` : ""}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效授權" : item.status === "REVOKED" ? "已撤銷" : "未生效／已到期"}</span><button className="text-button" disabled={!active || working} onClick={() => void openAuthorizedData(item)}>{working && selectedAuthorizationId === item.authorization_id ? "讀取中…" : item.case_id ? "檢視授權資料" : "建立並開啟案件"}</button></div></article>; })}</div> : <p className="empty-copy">目前沒有小農授權給此機構。</p>}
     </Panel>
-    {detail && <><Panel className="span-12" title={detail.farmer?.display_name ?? detail.authorization.farmer_id} note={`${detail.farmer?.city ?? ""}${detail.farmer?.district ?? ""}・授權目的：${detail.authorization.purpose}`} action={<button className="button button-primary" disabled={working} onClick={() => void downloadTraceableReport()}><Download />產生可追溯資料包</button>}><div className="portfolio-summary"><article><strong>{experienceTotal.toLocaleString()}</strong><span>綠色經驗值</span></article><article><strong>{indicators.length} 項</strong><span>已授權指標</span></article><article><strong>{health.length} 項</strong><span>Data Health 領域</span></article><article><strong>{detail.authorization.scopes.length} 類</strong><span>授權資料範圍</span></article></div></Panel><Panel className="span-6" title="四大分析指標" note="各指標獨立呈現，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}・${String(item.rule_version)}`} done />) : <p className="empty-copy">此授權未包含指標，或尚未計算。</p>}</div></Panel><Panel className="span-6" title="Data Health" note="顯示資料品質狀態與規則版本"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={`${String(item.status)}・${String(item.rule_version)}`} done={item.status === "GREEN"} />) : <p className="empty-copy">此授權未包含 Data Health，或尚未計算。</p>}</div></Panel></>}
+    {detail && <><Panel className="span-12" title={detail.farmer?.display_name ?? detail.authorization.farmer_id} note={`${detail.farmer?.city ?? ""}${detail.farmer?.district ?? ""}・授權目的：${detail.authorization.purpose}`} action={<button className="button button-primary" disabled={working} onClick={() => void downloadTraceableReport()}><Download />產生可追溯資料包</button>}><div className="portfolio-summary"><article><strong>{experienceTotal.toLocaleString()}</strong><span>綠色經驗值</span></article><article><strong>{indicators.length} 項</strong><span>已授權指標</span></article><article><strong>{health.length} 項</strong><span>Data Health 領域</span></article><article><strong>{detail.authorization.scopes.length} 類</strong><span>授權資料範圍</span></article></div></Panel><Panel className="span-6" title="四大分析指標" note="各指標獨立呈現，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={greenFinIndicatorLabels[String(item.indicator_type)] ?? String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}・${String(item.rule_version)}`} done />) : <p className="empty-copy">此授權未包含指標，或尚未計算。</p>}</div></Panel><Panel className="span-6" title="Data Health" note="顯示資料品質狀態與規則版本"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={`${String(item.status)}・${String(item.rule_version)}`} done={item.status === "GREEN"} />) : <p className="empty-copy">此授權未包含 Data Health，或尚未計算。</p>}</div></Panel></>}
   </div>;
 }
 
@@ -4706,7 +4801,7 @@ function FarmerFundingPage({
         const steps = fulfillmentSteps(redemption.fulfillmentType);
         const stage = Math.min(3, redemption.stage);
         const changeRequest = changeRequests.find((request) => request.requestType === "resource" && request.targetId === redemption.id);
-        return <article key={redemption.id}><header><div><small>{redemption.id}</small><h3>{redemption.resourceName}</h3><p>{redemption.cooperative}・{new Date(redemption.createdAt).toLocaleDateString("zh-TW")}</p></div><span className={`status-pill ${stage < 2 ? "waiting" : ""}`}>{steps[stage]}</span></header><div className="resource-redemption-summary"><p><small>扣抵綠點</small><b>{redemption.points.toLocaleString()} 點</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`}</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "物流單號" : "聯絡窗口"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.trackingNumber || "農會確認後提供" : `${redemption.contactName}・${redemption.contactPhone}`}</b></p></div><div className="resource-progress">{steps.map((label, index) => <div key={label} className={index < stage ? "done" : index === stage ? "active" : ""}><span>{index < stage ? <Check /> : index + 1}</span><b>{label}</b></div>)}</div>{changeRequest && <div className={`change-request-status ${changeRequest.status}`}><b>{changeRequest.status === "pending" ? "修改申請待承辦端確認" : changeRequest.status === "approved" ? "修改申請已核准" : "修改申請已退回"}</b><span>{changeRequest.reasonDetail}</span>{changeRequest.reviewNote && <small>回覆：{changeRequest.reviewNote}</small>}</div>}<div className="resource-redemption-actions"><button className="button button-secondary" onClick={() => onReceipt(redemption.id)}><Receipt />查看兌換收據</button><button className="button button-secondary" disabled={stage >= 2 || changeRequest?.status === "pending"} onClick={() => setChangeRedemption(redemption)}>{changeRequest?.status === "pending" ? "修改申請待確認" : stage >= 2 ? "履約後不可修改" : "申請修改兌換"}</button><span className="read-only-progress"><LockKeyhole />履約進度由銀行／政府／企業承辦端更新</span></div></article>;
+        return <article key={redemption.id}><header><div><small>{redemption.id}</small><h3>{redemption.resourceName}</h3><p>{redemption.cooperative}・{parseDbTime(redemption.createdAt).toLocaleDateString("zh-TW")}</p></div><span className={`status-pill ${stage < 2 ? "waiting" : ""}`}>{steps[stage]}</span></header><div className="resource-redemption-summary"><p><small>扣抵綠點</small><b>{redemption.points.toLocaleString()} 點</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`}</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "物流單號" : "聯絡窗口"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.trackingNumber || "農會確認後提供" : `${redemption.contactName}・${redemption.contactPhone}`}</b></p></div><div className="resource-progress">{steps.map((label, index) => <div key={label} className={index < stage ? "done" : index === stage ? "active" : ""}><span>{index < stage ? <Check /> : index + 1}</span><b>{label}</b></div>)}</div>{changeRequest && <div className={`change-request-status ${changeRequest.status}`}><b>{changeRequest.status === "pending" ? "修改申請待承辦端確認" : changeRequest.status === "approved" ? "修改申請已核准" : "修改申請已退回"}</b><span>{changeRequest.reasonDetail}</span>{changeRequest.reviewNote && <small>回覆：{changeRequest.reviewNote}</small>}</div>}<div className="resource-redemption-actions"><button className="button button-secondary" onClick={() => onReceipt(redemption.id)}><Receipt />查看兌換收據</button><button className="button button-secondary" disabled={stage >= 2 || changeRequest?.status === "pending"} onClick={() => setChangeRedemption(redemption)}>{changeRequest?.status === "pending" ? "修改申請待確認" : stage >= 2 ? "履約後不可修改" : "申請修改兌換"}</button><span className="read-only-progress"><LockKeyhole />履約進度由銀行／政府／企業承辦端更新</span></div></article>;
       })}</div>}
     </Panel>{changeRedemption && <ResourceChangeRequestModal redemption={changeRedemption} onClose={() => setChangeRedemption(null)} onSubmit={async (values) => { const success = await onRequestChange(values); if (success) setChangeRedemption(null); return success; }} />}</div>
   );
@@ -4782,7 +4877,7 @@ function InstitutionResourceFulfillmentPage({ resourceRedemptions, changeRequest
   const fulfillmentSteps = (type: "delivery" | "appointment") => type === "delivery" ? ["兌換成立", "農會備貨", "配送中", "完成簽收"] : ["兌換成立", "農會確認", "預約已排程", "服務完成"];
   return <div className="dashboard-grid">
     <div className="metrics span-12"><Metric icon={PackageCheck} value={`${resourceRedemptions.length} 筆`} label="資源兌換案件" delta="承辦端統一管理" /><Metric icon={Truck} value={`${resourceRedemptions.filter((item) => item.stage > 0 && item.stage < 3).length} 筆`} label="履約處理中" delta="配送與預約" /><Metric icon={FileCheck2} value={`${pendingChanges.length} 筆`} label="修改待確認" delta="保留原始紀錄" /><Metric icon={CheckCircle2} value={`${resourceRedemptions.filter((item) => item.stage >= 3).length} 筆`} label="履約完成" delta="可供成果揭露" /></div>
-    <Panel className="span-12" title="農業資源兌換履約進度" note="由銀行／政府／企業承辦端更新農會確認、配送、預約與完成時間"><div className="resource-redemption-list">{resourceRedemptions.length === 0 ? <div className="empty-receipt"><span><PackageCheck /></span><h3>目前沒有待履約案件</h3><p>小農完成農業資源兌換後會顯示在這裡。</p></div> : resourceRedemptions.map((redemption) => { const steps = fulfillmentSteps(redemption.fulfillmentType); const stage = Math.min(3, redemption.stage); const pending = pendingChanges.find((request) => request.targetId === redemption.id); return <article key={redemption.id}><header><div><small>{redemption.id}</small><h3>{redemption.resourceName}</h3><p>{redemption.cooperative}・{redemption.fulfillmentType === "delivery" ? "配送型資源" : "預約型服務"}</p></div><span className={`status-pill ${stage < 2 ? "waiting" : ""}`}>{steps[stage]}</span></header><div className="resource-redemption-summary"><p><small>申請小農</small><b>{redemption.farmerId}</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`}</b></p><p><small>聯絡窗口</small><b>{redemption.contactName}・{redemption.contactPhone}</b></p></div><div className="resource-progress">{steps.map((label, index) => <div key={label} className={index < stage ? "done" : index === stage ? "active" : ""}><span>{index < stage ? <Check /> : index + 1}</span><b>{label}</b></div>)}</div>{pending && <div className="change-request-status"><b>小農已申請修改資料</b><span>{pending.reasonDetail}</span></div>}<div className="resource-redemption-actions"><button className="button button-primary" disabled={stage >= 3 || Boolean(pending)} onClick={() => onAdvance(redemption.id)}>{pending ? "請先處理修改申請" : stage >= 3 ? "履約已完成" : `更新為「${steps[stage + 1]}」`}<ArrowRight /></button></div></article>; })}</div></Panel>
+    <Panel className="span-12" title="農業資源兌換履約進度" note="由銀行／政府／企業承辦端更新農會確認、配送、預約與完成時間"><div className="resource-redemption-list">{resourceRedemptions.length === 0 ? <div className="empty-receipt"><span><PackageCheck /></span><h3>目前沒有待履約案件</h3><p>小農完成農業資源兌換後會顯示在這裡。</p></div> : resourceRedemptions.map((redemption) => { const steps = fulfillmentSteps(redemption.fulfillmentType); const stage = Math.min(3, redemption.stage); const pending = pendingChanges.find((request) => request.targetId === redemption.id); return <article key={redemption.id}><header><div><small>{redemption.id}</small><h3>{redemption.resourceName}</h3><p>{redemption.cooperative}・{redemption.fulfillmentType === "delivery" ? "配送型資源" : "預約型服務"}</p></div><span className={`status-pill ${stage < 2 ? "waiting" : ""}`}>{steps[stage]}</span></header><div className="resource-redemption-summary"><p><small>申請小農</small><b>{redemption.farmerName ?? redemption.farmerId}</b></p><p><small>{redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"}</small><b>{redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`}</b></p><p><small>聯絡窗口</small><b>{redemption.contactName}・{redemption.contactPhone}</b></p></div><div className="resource-progress">{steps.map((label, index) => <div key={label} className={index < stage ? "done" : index === stage ? "active" : ""}><span>{index < stage ? <Check /> : index + 1}</span><b>{label}</b></div>)}</div>{pending && <div className="change-request-status"><b>小農已申請修改資料</b><span>{pending.reasonDetail}</span></div>}<div className="resource-redemption-actions"><button className="button button-primary" disabled={stage >= 3 || Boolean(pending)} onClick={() => onAdvance(redemption.id)}>{pending ? "請先處理修改申請" : stage >= 3 ? "履約已完成" : `更新為「${steps[stage + 1]}」`}<ArrowRight /></button></div></article>; })}</div></Panel>
     <Panel className="span-12" title="農會資源兌換修改申請" note="核准後才會更新配送、預約或聯絡資料；原始申請與審核紀錄皆會保留">{pendingChanges.length === 0 ? <div className="empty-receipt"><span><FileCheck2 /></span><h3>目前沒有待處理修改申請</h3><p>小農送出修改後會顯示在這裡。</p></div> : <div className="change-review-list">{pendingChanges.map((request) => { const redemption = resourceRedemptions.find((item) => item.id === request.targetId); return <article key={request.id}><header><div><small>{request.id}</small><h3>{redemption?.resourceName ?? request.targetId}</h3><p>{request.reasonDetail}</p></div><span className="status-pill waiting">待承辦確認</span></header><div className="receipt-box"><Row label="承辦農會" value={request.requested.cooperative ?? ""} /><Row label="聯絡窗口" value={`${request.requested.contactName ?? ""}・${request.requested.contactPhone ?? ""}`} /><Row label={request.requested.fulfillmentType === "delivery" ? "新配送地址" : "新預約時間"} value={request.requested.fulfillmentType === "delivery" ? request.requested.deliveryAddress ?? "" : `${request.requested.appointmentDate ?? ""} ${request.requested.appointmentSlot ?? ""}`} /></div><div className="resource-redemption-actions"><button className="button button-secondary" onClick={() => onReviewResourceChange(request.id, "rejected")}>退回申請</button><button className="button button-primary" onClick={() => onReviewResourceChange(request.id, "approved")}><Check />核准並套用</button></div></article>; })}</div>}</Panel>
   </div>;
 }
@@ -4850,7 +4945,7 @@ function AdminApiSystemPage({
           const inputSummary = run.serviceKey === "invoice" && invoiceNumber
             ? `送出資料：${invoiceNumber}・NT$ ${Number(run.input.amount ?? 0).toLocaleString()}・${String(run.input.transactionDate ?? "未填日期")}`
             : `送出資料：${JSON.stringify(run.input)}`;
-          return <article key={run.id}><div><span className="status-pill">成功</span><h3>{setting?.displayName ?? run.serviceKey}</h3><p>{message}</p><p className="verification-input">{inputSummary}</p><small>{run.id}・{run.createdAt}</small></div><strong>{run.rewardPoints > 0 ? `+${run.rewardPoints} 綠點` : "無點數異動"}</strong></article>;
+          return <article key={run.id}><div><span className="status-pill">成功</span><h3>{setting?.displayName ?? run.serviceKey}</h3><p>{message}</p><p className="verification-input">{inputSummary}</p><small>{run.id}・{formatDbTime(run.createdAt)}</small></div><strong>{run.rewardPoints > 0 ? `+${run.rewardPoints} 綠點` : "無點數異動"}</strong></article>;
         })}</div>}
       </Panel>
     </div>
@@ -5102,7 +5197,7 @@ function InvoiceModal({
   return (
     <ModalShell title="回傳消費證明" onClose={onClose} wide>
       {stage === "success" ? (
-        <Success title={`驗證完成，獲得 ${rewardPoints} 綠點`} text="這筆友善農產消費已通過平台驗證，綠點已加入你的錢包。">
+        <Success title="發票已送出，等待審核" text={`平台管理員核對發票資料後才會發放 ${rewardPoints} 綠點，審核結果會顯示在綠點紀錄。`}>
           {invoice && <div className="receipt-box invoice-verification-summary"><Row label="已送出發票" value={invoice.invoiceNumber} /><Row label="消費日期" value={invoice.transactionDate} /><Row label="消費金額" value={`NT$ ${invoice.amount.toLocaleString()}`} /></div>}
           <button className="button button-primary button-block" onClick={onClose}>回到綠點錢包</button>
         </Success>
@@ -5159,8 +5254,8 @@ function ReceiptModal({
           <section>
             <h4>專案里程碑</h4>
             <div className="receipt-timeline">
-              <div className="done"><span><Check /></span><p><b>綠點支持完成</b><small>2026/07/31</small></p></div>
-              <div className="active"><span>2</span><p><b>採購與改善進行中</b><small>預計 2026/08 完成</small></p></div>
+              <div className="done"><span><Check /></span><p><b>綠點支持完成</b><small>{receiptIssuedLabel(item)}</small></p></div>
+              <div className="active"><span>2</span><p><b>採購與改善進行中</b><small>{item.completionDate ? `預計 ${item.completionDate} 完成` : "依專案進度更新"}</small></p></div>
               <div><span>3</span><p><b>成果驗證與回報</b><small>完成後更新成果透明度</small></p></div>
             </div>
           </section>
@@ -5473,7 +5568,7 @@ function OfferModal({ balance, offerId, step, setStep, onRedeem, onClose }: { ba
 
 function ResourceReceiptModal({ redemption, onClose }: { redemption: BackendSnapshot["resourceRedemptions"][number] | undefined; onClose: () => void }) {
   if (!redemption) return <ModalShell title="農會資源兌換收據" onClose={onClose} small><div className="empty-receipt"><span><Receipt /></span><h3>找不到兌換紀錄</h3><p>請重新整理後再開啟收據。</p></div></ModalShell>;
-  return <ModalShell title="農會資源兌換收據" onClose={onClose} wide><article className="resource-receipt-document"><header><div><small>GFES 綠色消費循環平台</small><h2>農會農業資源兌換收據</h2><p>收據編號：{redemption.id}</p></div><span><Leaf /></span></header><div className="resource-receipt-status"><b>{redemption.status === "completed" ? "履約完成" : "履約處理中"}</b><small>建立時間 {new Date(redemption.createdAt).toLocaleString("zh-TW")}</small></div><section><h3>兌換明細</h3><div className="receipt-box"><Row label="兌換資源" value={redemption.resourceName} /><Row label="扣抵綠點" value={`${redemption.points.toLocaleString()} 點`} /><Row label="申請小農" value="禾日友善農園" /><Row label="承辦農會" value={redemption.cooperative} /></div></section><section><h3>{redemption.fulfillmentType === "delivery" ? "配送資料" : "預約資料"}</h3><div className="receipt-box"><Row label="聯絡窗口" value={`${redemption.contactName}・${redemption.contactPhone}`} /><Row label={redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"} value={redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`} />{redemption.trackingNumber && <Row label="物流單號" value={redemption.trackingNumber} />}<Row label="用途備註" value={redemption.note || "無"} /></div></section><footer><p>本收據用於證明綠點扣抵及農會資源申請紀錄；實際配送、服務與補助資格依承辦農會通知為準。</p><strong>GFES・地方支持可追溯</strong></footer></article><div className="modal-actions"><button className="button button-secondary" onClick={onClose}>關閉</button><button className="button button-primary" onClick={() => window.print()}><Download />列印或另存 PDF</button></div></ModalShell>;
+  return <ModalShell title="農會資源兌換收據" onClose={onClose} wide><article className="resource-receipt-document"><header><div><small>GFES 綠色消費循環平台</small><h2>農會農業資源兌換收據</h2><p>收據編號：{redemption.id}</p></div><span><Leaf /></span></header><div className="resource-receipt-status"><b>{redemption.status === "completed" ? "履約完成" : "履約處理中"}</b><small>建立時間 {formatDbTime(redemption.createdAt)}</small></div><section><h3>兌換明細</h3><div className="receipt-box"><Row label="兌換資源" value={redemption.resourceName} /><Row label="扣抵綠點" value={`${redemption.points.toLocaleString()} 點`} /><Row label="申請小農" value="禾日友善農園" /><Row label="承辦農會" value={redemption.cooperative} /></div></section><section><h3>{redemption.fulfillmentType === "delivery" ? "配送資料" : "預約資料"}</h3><div className="receipt-box"><Row label="聯絡窗口" value={`${redemption.contactName}・${redemption.contactPhone}`} /><Row label={redemption.fulfillmentType === "delivery" ? "配送地址" : "預約時間"} value={redemption.fulfillmentType === "delivery" ? redemption.deliveryAddress : `${redemption.appointmentDate} ${redemption.appointmentSlot}`} />{redemption.trackingNumber && <Row label="物流單號" value={redemption.trackingNumber} />}<Row label="用途備註" value={redemption.note || "無"} /></div></section><footer><p>本收據用於證明綠點扣抵及農會資源申請紀錄；實際配送、服務與補助資格依承辦農會通知為準。</p><strong>GFES・地方支持可追溯</strong></footer></article><div className="modal-actions"><button className="button button-secondary" onClick={onClose}>關閉</button><button className="button button-primary" onClick={() => window.print()}><Download />列印或另存 PDF</button></div></ModalShell>;
 }
 
 function InstitutionPortfolioModal({

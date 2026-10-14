@@ -25,6 +25,17 @@ interface ExecutionContext {
 // dangerouslyAllowSVG: true in next.config.js and uncomment below:
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
+// Same-origin framing stays allowed for in-app PDF previews; other sites cannot embed the portals.
+function withSecurityHeaders(response: Response, url: URL) {
+  const secured = new Response(response.body, response);
+  secured.headers.set("X-Frame-Options", "SAMEORIGIN");
+  secured.headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+  secured.headers.set("X-Content-Type-Options", "nosniff");
+  secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (url.protocol === "https:") secured.headers.set("Strict-Transport-Security", "max-age=31536000");
+  return secured;
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -40,7 +51,7 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, ctx);
+    return withSecurityHeaders(await handler.fetch(request, env, ctx), url);
   },
 };
 
