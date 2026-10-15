@@ -270,7 +270,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(css, /\.dashboard-shell \.mobile-nav-institution \{ grid-template-columns: repeat\(5/);
   assert.match(css, /\.dashboard-shell \.mobile-nav \{[^}]*background: linear-gradient\(145deg, #12382a, #08251b\)/);
   assert.match(demo, /mobile-card-table orders-table/);
-  assert.match(css, /@container dashboard-shell \(max-width: 780px\)/);
+  assert.match(css, /@container dashboard-shell \(max-width: 900px\)/);
   assert.match(css, /\.mobile-card-table td::before \{ content: none; \}/);
   assert.match(css, /\.dashboard-shell \.metrics \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.action-proof-uploader/);

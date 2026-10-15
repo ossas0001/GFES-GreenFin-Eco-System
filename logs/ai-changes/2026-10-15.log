@@ -47,3 +47,12 @@ Gate: tsc, lint 0 errors, npm test 49/49.
 - Farmers see a per-project supporter roster (masked names, total points, count, latest date); consumers and institutions do not receive it.
 
 Gate: tsc, lint 0 errors, npm test 49/49, local API checks 6/6.
+
+2026-10-15 — Tablet (iPad) layout
+
+- Reported on iPad: project/product cards in two 305px columns clipped their buttons. Card grids (projects, nearby actions, resource redemptions) now pair only when each card gets 420–440px.
+- Phone layout (bottom nav) now applies up to 900px for role dashboards and admin, covering iPad portrait.
+- 1/3 + 2/3 dashboard panels stack up to 1400px (iPad landscape incl. iPad Pro); receipt library stacks below 1240px; admin account/content rows stack below 1360px.
+- Verified at 375, 820, 1024, 1180, 1366 and 1440px for all four roles.
+
+Gate: tsc, lint 0 errors, npm test 49/49.

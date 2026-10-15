@@ -248,7 +248,7 @@ img { display: block; max-width: 100%; }
   .farmer-media-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .admin-shell { display: block; padding-bottom: 76px; }
   .admin-sidebar { display: none; }
   .admin-main { padding: 22px 14px 32px; }
@@ -827,7 +827,7 @@ img { display: block; max-width: 100%; }
 .profile-popover button { width: 100%; min-height: 42px; margin-top: 5px; padding: 8px 10px; display: flex; align-items: center; gap: 9px; color: var(--forest-900); border: 0; border-radius: 10px; background: transparent; font-weight: 800; text-align: left; cursor: pointer; }
 .profile-popover button:hover, .profile-popover button:focus-visible { background: #edf4e8; }
 .profile-popover button svg { width: 17px; height: 17px; }
-@container dashboard-shell (max-width: 780px) {
+@container dashboard-shell (max-width: 900px) {
   .dashboard-shell .profile-popover { left: 0; right: auto; }
 }
 .avatar { width: 34px; height: 34px; display: grid; place-items: center; color: white; border-radius: 11px; background: var(--forest-700); }
@@ -2301,11 +2301,11 @@ td svg { width: 17px; }
   .dashboard-shell .institution-budget-column > small { display: block; width: 100%; min-height: 34px; margin-top: 6px; color: #53675d; font-size: 10px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
 }
 
-@container dashboard-shell (min-width: 781px) and (max-width: 930px) {
+@container dashboard-shell (min-width: 901px) and (max-width: 930px) {
   .dashboard-shell .institution-dashboard-top .profile-button > span:not(.avatar) { display: none; }
 }
 
-@container dashboard-shell (max-width: 780px) {
+@container dashboard-shell (max-width: 900px) {
   .dashboard-shell .dashboard { display: block; }
   .dashboard-shell .sidebar { display: none; }
   .dashboard-shell .dashboard-main { padding: 20px 14px 178px; }
@@ -2491,7 +2491,7 @@ td svg { width: 17px; }
 .settings-actions { display: flex; justify-content: flex-end; }
 .settings-actions .button { min-width: 190px; }
 
-@container dashboard-shell (max-width: 780px) {
+@container dashboard-shell (max-width: 900px) {
   .dashboard-shell .settings-page-header,
   .dashboard-shell .settings-section { padding: 18px 16px; border-radius: 18px; }
   .dashboard-shell .settings-page-header { align-items: flex-start; flex-direction: column; }
@@ -2500,7 +2500,7 @@ td svg { width: 17px; }
   .dashboard-shell .settings-actions .button { width: 100%; }
 }
 
-@container dashboard-shell (max-width: 780px) {
+@container dashboard-shell (max-width: 900px) {
   .orders-table td:nth-child(1)::before { content: "訂單"; }
   .orders-table td:nth-child(2)::before { content: "商品"; }
   .orders-table td:nth-child(3)::before { content: "兌換數量"; }
@@ -2818,7 +2818,7 @@ td svg { width: 17px; }
 /* Admin logout lives in the sidebar on desktop and in the top bar on phones. */
 .admin-topbar-actions { display: flex; flex: 0 0 auto; gap: 8px; }
 .admin-topbar-logout { display: none; }
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .admin-topbar-logout { display: inline-flex; padding-inline: 12px; white-space: nowrap; }
 }
 
@@ -2832,3 +2832,25 @@ td svg { width: 17px; }
 .farmer-supporter-roster li small { grid-column: 1; color: var(--muted); font-size: 12px; }
 .farmer-supporter-roster li b { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--forest-800); }
 .farmer-supporter-note { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* Tablet widths (e.g. iPad landscape with the sidebar) left two 305px card columns; only pair cards when each gets enough room. */
+.project-list-expanded, .dashboard-shell .project-list-expanded { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
+.local-action-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+
+/* The receipt needs ~480px; below that, show the receipt list above the selected receipt. */
+@media (max-width: 1240px) {
+  .receipt-library, .dashboard-shell .receipt-library { grid-template-columns: 1fr; }
+}
+.resource-redemption-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.resource-redemption-actions { flex-wrap: wrap; }
+
+/* iPads (up to 1366px landscape): side-by-side 1/3 + 2/3 dashboard panels leave cramped columns; stack them up to 1400px. */
+@container dashboard-shell (max-width: 1400px) {
+  .dashboard-shell .span-4, .dashboard-shell .span-5, .dashboard-shell .span-7, .dashboard-shell .span-8 { grid-column: span 12; }
+}
+
+/* Admin record rows have fixed minimum column widths; stack them when the content area is narrower than they need. */
+@media (max-width: 1360px) {
+  .admin-account-row, .admin-content-row { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .admin-account-actions { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+}
