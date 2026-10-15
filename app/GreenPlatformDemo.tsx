@@ -2384,7 +2384,6 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
               <button className={institutionPage === "report" ? "active" : ""} onClick={() => setInstitutionPage("report")}><Download />報告</button>
             </>
           )}
-          <button onClick={backHome}><LogOut />首頁</button>
         </nav>
         {modals}
       </div>
@@ -2938,7 +2937,10 @@ function AdminDashboard({
       <main className="admin-main">
         <header className="admin-topbar">
           <div><span>GFES 綠色消費循環平台</span><h1>{({ overview: "營運儀表板", accounts: "帳號與角色管理", content: "平台內容與計畫管理", reviews: "消費者行動證明審核", generator: "正式範例資料生成區", greenfinDemo: "GreenFin 完整 PDF 假資料", system: "API 測試與系統後台", parameters: "系統參數設定", audit: "管理員操作紀錄" } as Record<AdminSection, string>)[section]}</h1></div>
-          <button className="button button-secondary" disabled={busy} onClick={onRefresh}><RefreshCcw />重新整理</button>
+          <div className="admin-topbar-actions">
+            <button className="button button-secondary" disabled={busy} onClick={onRefresh} aria-label="重新整理"><RefreshCcw /><span>重新整理</span></button>
+            <button className="button button-secondary admin-topbar-logout" onClick={onExit}><LogOut />登出</button>
+          </div>
         </header>
         {error && <div className="admin-alert">{error}</div>}
         {notice && <div className="admin-notice"><CheckCircle2 />{notice}<button onClick={() => setNotice("")} aria-label="關閉"><X /></button></div>}
@@ -3185,7 +3187,6 @@ function AdminDashboard({
         <button className={section === "system" ? "active" : ""} onClick={() => setSection("system")}><ScanLine />API</button>
         <button className={section === "parameters" ? "active" : ""} onClick={() => setSection("parameters")}><Monitor />參數</button>
         <button className={section === "audit" ? "active" : ""} onClick={() => setSection("audit")}><FileCheck2 />紀錄</button>
-        <button onClick={onExit}><LogOut />登出</button>
       </nav>
     </div>
   );

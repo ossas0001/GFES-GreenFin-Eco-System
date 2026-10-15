@@ -109,7 +109,8 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(schema, /export const consumerSettings/);
   assert.match(schema, /deliveryAddress: text\("delivery_address"\)/);
   assert.match(css, /\.consumer-settings-page/);
-  assert.match(css, /\.mobile-nav-consumer \{ grid-template-columns: repeat\(7/);
+  assert.match(css, /\.mobile-nav-consumer \{ grid-template-columns: repeat\(6/);
+  assert.doesNotMatch(demo, /<LogOut \/>首頁<\/button>/, "mobile nav must not show a logout action labelled as home");
   assert.match(demo, /receiptItems/);
   assert.match(demo, /了解更多完整故事/);
   assert.match(demo, /銀行／政府／企業/);
@@ -266,7 +267,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(css, /\.receipt-more-button/);
   assert.doesNotMatch(demo, /dashboard-device-toggle/);
   assert.match(demo, /mobile-nav-institution/);
-  assert.match(css, /\.dashboard-shell \.mobile-nav-institution \{ grid-template-columns: repeat\(6/);
+  assert.match(css, /\.dashboard-shell \.mobile-nav-institution \{ grid-template-columns: repeat\(5/);
   assert.match(css, /\.dashboard-shell \.mobile-nav \{[^}]*background: linear-gradient\(145deg, #12382a, #08251b\)/);
   assert.match(demo, /mobile-card-table orders-table/);
   assert.match(css, /@container dashboard-shell \(max-width: 780px\)/);
