@@ -58,3 +58,10 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 - Production HTTP smoke checks: root and all three role pages returned 200 with non-duplicated titles; `/api/public` 200; unauthenticated `/api/platform` 401; sample PDF 200; new stylesheet contains the GreenFin sub-navigation and scroll-hint rules; `X-Frame-Options`, `frame-ancestors 'self'`, `nosniff` and HSTS headers present.
 - Production browser check: public home page at 375 × 812 CSS pixels had no horizontal overflow or broken images.
 - Signed-in production flows were not exercised by the automated agent; the four demo accounts should be checked by the owner.
+
+## 2026-10-15 follow-up release
+
+- Previous live Worker: `59f8380b-0a36-47a8-956c-446e9af9d9cd`.
+- Current Worker: `86fca159-9d96-4ea6-afe7-2e4e5116d2ff`, deployed from `fix/greenfin-progress-approved-docs` (PR #3): GreenFin workspace progress now counts submitted/approved documents the same way as the farmer dashboard.
+- Production check: demo farmer GreenFin progress 5/5 (100%), 650 XP, L4.
+- Production demo data (owner-approved, via application APIs): a complete DEMO irrigation resubmission was verified as V1 evidence for the 11 demo actions, and the superseded missing-date anomaly was resolved by human review with a traceable note.
