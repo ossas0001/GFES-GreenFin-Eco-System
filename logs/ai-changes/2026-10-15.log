@@ -21,3 +21,10 @@ Gate: verified locally; see logs/test-results/2026-10-15-qa-review-fixes.txt.
 - Demo farmer data on production: added a complete DEMO resubmission as evidence for the 11 demo actions, reviewed the superseded missing-date anomaly with user approval, recalculated (650 XP, L4).
 
 Gate: npm test 49/49, tsc pass.
+
+2026-10-15 — Google OAuth token exchange diagnostics
+
+- New production OAuth client created for gfes-green-consumption (old client left untouched for gfes.pages.dev); GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET set on the backend Worker (secret entered by the owner).
+- First live attempt failed at the token exchange. Added a log line with only Google error code/description, public client id and redirect URI; trimmed configured client id/secret.
+
+Gate: tsc, lint 0 errors, npm test 49/49.

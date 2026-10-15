@@ -63,9 +63,10 @@ export async function GET(request: Request) {
 
   const { env } = await import("cloudflare:workers");
   const configured = env as unknown as { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string };
+  // Trim so a secret pasted with a trailing newline or space still works.
   const secrets = {
-    GOOGLE_CLIENT_ID: configured.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: configured.GOOGLE_CLIENT_SECRET,
+    GOOGLE_CLIENT_ID: configured.GOOGLE_CLIENT_ID?.trim(),
+    GOOGLE_CLIENT_SECRET: configured.GOOGLE_CLIENT_SECRET?.trim(),
   };
   if (!secrets.GOOGLE_CLIENT_ID || !secrets.GOOGLE_CLIENT_SECRET) return returnWithError(request, "Google 註冊服務尚未完成設定。", savedState.role);
 
@@ -81,8 +82,19 @@ export async function GET(request: Request) {
       redirect_uri: savedState.redirect_uri,
     }),
   });
-  const token = await tokenResponse.json() as { access_token?: string };
-  if (!tokenResponse.ok || !token.access_token) return returnWithError(request, "Google 身分驗證失敗，請重新操作。", savedState.role);
+  const token = await tokenResponse.json().catch(() => ({})) as { access_token?: string; error?: string; error_description?: string };
+  if (!tokenResponse.ok || !token.access_token) {
+    // Log only Google's error code and description plus non-sensitive config shape; never the code, secret or tokens.
+    console.error("google_token_exchange_failed", JSON.stringify({
+      status: tokenResponse.status,
+      error: token.error ?? null,
+      errorDescription: token.error_description ?? null,
+      clientId: secrets.GOOGLE_CLIENT_ID.split(".")[0],
+      secretHasExpectedPrefix: secrets.GOOGLE_CLIENT_SECRET.startsWith("GOCSPX-"),
+      redirectUri: savedState.redirect_uri,
+    }));
+    return returnWithError(request, "Google 身分驗證失敗，請重新操作。", savedState.role);
+  }
 
   const userResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: { authorization: `Bearer ${token.access_token}` },

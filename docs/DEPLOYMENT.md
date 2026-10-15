@@ -65,3 +65,9 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 - Current Worker: `86fca159-9d96-4ea6-afe7-2e4e5116d2ff`, deployed from `fix/greenfin-progress-approved-docs` (PR #3): GreenFin workspace progress now counts submitted/approved documents the same way as the farmer dashboard.
 - Production check: demo farmer GreenFin progress 5/5 (100%), 650 XP, L4.
 - Production demo data (owner-approved, via application APIs): a complete DEMO irrigation resubmission was verified as V1 evidence for the 11 demo actions, and the superseded missing-date anomaly was resolved by human review with a traceable note.
+
+## 2026-10-15 Google OAuth configuration
+
+- New OAuth client `GFES GreenFin Production Web Client` (project gfes-green-consumption) with origins/callbacks for https://gfes-green-consumption.pages.dev and http://localhost:4310. The older `GFES Web Client` was left unchanged because gfes.pages.dev still uses it.
+- Backend Worker secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (secret entered by the owner).
+- Current Worker: `ff8a5bc4-1db4-4501-b24d-d817dcf3d688` (PR #4) logs Google token-exchange error codes without secrets. First live attempt failed at the token exchange; retest after Google propagation.
