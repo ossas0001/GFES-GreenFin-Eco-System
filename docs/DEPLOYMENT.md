@@ -75,3 +75,10 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 ## 2026-10-15 mobile navigation release
 
 - Current Worker: `f15aed22-e6a8-4500-93ae-f9ae86f57d23` (PR #5): removed the mobile 首頁 item that logged users out; admin mobile logout moved to the top bar. Previous: `ff8a5bc4-1db4-4501-b24d-d817dcf3d688`.
+
+## 2026-10-15 incident: Google secret overwritten and API hang
+
+- 02:09:07.229Z the owner re-entered `GOOGLE_CLIENT_SECRET` (version `cd1ea192`). A concurrent `wrangler deploy` (`f15aed22`, 83 ms later) was based on the prior version and carried the old, invalid secret, so Google login kept failing with `invalid_client`.
+- Recovery attempt redeployed `e6871777` from a build produced while the local dev server was running; the build was incomplete and every API request hung (requests ended as Canceled). Mitigated by rolling back to `f15aed22`, then to `cd1ea192` (owner secret, code from PR #4).
+- Owner confirmed Google login works on `cd1ea192`. Redeployed the mobile navigation change from a clean build (`dist` removed, dev server stopped) as `ad182251-51d5-4271-a240-85148f4e0778`; APIs respond in about 0.3 s and the new stylesheet is served.
+- Lessons: never deploy while a secret is being changed; always confirm `Build complete` from a clean `dist` with the dev server stopped before `wrangler deploy`.
