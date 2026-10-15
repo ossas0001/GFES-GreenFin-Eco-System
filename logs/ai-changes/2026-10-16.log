@@ -1,0 +1,8 @@
+
+2026-10-16 — 10.2-inch iPad check (810x1080 / 1080x810)
+
+- Scanned every page of all four roles in both orientations plus visual checks.
+- Fixed: GreenFin workspace summary (220+240+340px fixed columns) overflowed at 1080px with the sidebar; now wraps up to 1200px.
+- Fixed: stat cards broke numbers from units ("102,520 / 點"); value now uses clamp(20px, 2.2vw, 27px) without wrapping and cards pair two per row up to 1200px.
+
+Gate: tsc, lint 0 errors, npm test 49/49.
