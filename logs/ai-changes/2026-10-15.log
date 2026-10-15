@@ -40,3 +40,10 @@ Gate: tsc, lint 0 errors, npm test 49/49.
 - Incident (Google secret overwritten by concurrent deploy, then API hang from an incomplete build) recorded in docs/DEPLOYMENT.md. Current Worker ad182251; Google login confirmed by owner on the version carrying the owner-entered secret.
 
 - Final release 967d5a8c: mobile navigation fix plus owner-entered Google secret; owner confirmed Google login works.
+
+2026-10-15 — Unlimited support/redeem and farmer supporter roster
+
+- Consumers can support the same project and redeem the same product repeatedly. Dropped the runtime unique index idx_project_support_once, made ledger source ids unique per support, and count a supporter once per project.
+- Farmers see a per-project supporter roster (masked names, total points, count, latest date); consumers and institutions do not receive it.
+
+Gate: tsc, lint 0 errors, npm test 49/49, local API checks 6/6.

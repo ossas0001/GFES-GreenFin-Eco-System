@@ -317,6 +317,7 @@ type BackendSnapshot = {
   registeredActionIds: string[];
   orders: Array<{ id: string; productId: string; farmerId?: string; title: string; image: string; farmer: string; points: number; quantity: number; stage: number; status: string; recipientName: string; recipientPhone: string; postalCode: string; shippingCity: string; shippingDistrict: string; shippingAddress: string; deliveryNote: string; carrier: string; trackingNumber: string; fulfillmentNote: string; packedAt: string; shippedAt: string; completedAt: string; createdAt: string; updatedAt: string }>;
   supportDates?: Record<string, string>;
+  projectSupporters?: Record<string, ProjectSupporter[]>;
   ledger: Array<{ id: number; deltaPoints: number; sourceType: string; sourceId: string | null; description: string; createdAt: string }>;
   supportedProjectIds: string[];
   redeemedProductIds: string[];
@@ -1601,12 +1602,12 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   function openLocalProject(id: string) {
     const project = availableLocalProjects.find((item) => item.id === id) || localProjects[0];
     setSelectedProjectId(project.id);
-    if (project.kind === "support" && supportedProjectIds.includes(project.id)) {
+    if (!backendState && project.kind === "support" && supportedProjectIds.includes(project.id)) {
       setLastSupportedId(project.id);
       setModal("receipt");
       return;
     }
-    if (project.kind === "redeem" && redeemedProjectIds.includes(project.id)) {
+    if (!backendState && project.kind === "redeem" && redeemedProjectIds.includes(project.id)) {
       setLastRedeemedId(project.id);
       setConsumerPage("orders");
       setModal(null);
@@ -1837,11 +1838,6 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
       return;
     }
     if (backendState) {
-      if (supportedProjectIds.includes(selectedProject.id)) {
-        setLastSupportedId(selectedProject.id);
-        setModal("receipt");
-        return;
-      }
       const snapshot = await sendAction("support_project", { projectId: selectedProject.id });
       if (!snapshot) return;
       setLastSupportedId(selectedProject.id);
@@ -1871,12 +1867,6 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
 
   async function redeemProduct(shippingDetails?: ShippingDetails) {
     if (backendState && selectedProject.kind === "redeem") {
-      if (redeemedProjectIds.includes(selectedProject.id)) {
-        setLastRedeemedId(selectedProject.id);
-        setConsumerPage("orders");
-        setModal(null);
-        return;
-      }
       if (!shippingDetails) return;
       const snapshot = await sendAction("redeem_product", { productId: selectedProject.id, quantity: 1, ...shippingDetails });
       if (!snapshot) return;
@@ -1981,10 +1971,10 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         />
       )}
       {modal === "support" && (
-        <ActionModal item={selectedProject} done={supportedProjectIds.includes(selectedProject.id)} balance={points} onClose={() => setModal(null)} onConfirm={supportFarm} />
+        <ActionModal item={selectedProject} done={!backendState && supportedProjectIds.includes(selectedProject.id)} balance={points} onClose={() => setModal(null)} onConfirm={supportFarm} />
       )}
       {modal === "redeem" && (
-        <ActionModal item={selectedProject} done={redeemedProjectIds.includes(selectedProject.id)} balance={points} defaultShipping={{ recipientName: backendState?.consumerSettings.deliveryRecipientName ?? backendState?.consumer.displayName ?? "", recipientPhone: backendState?.consumerSettings.deliveryPhone ?? "", postalCode: backendState?.consumerSettings.deliveryPostalCode ?? "", shippingCity: backendState?.consumerSettings.deliveryCity ?? backendState?.consumer.city ?? "", shippingDistrict: backendState?.consumerSettings.deliveryDistrict ?? backendState?.consumer.district ?? "", shippingAddress: backendState?.consumerSettings.deliveryAddress ?? "", deliveryNote: backendState?.consumerSettings.deliveryNote ?? "" }} onClose={() => setModal(null)} onConfirm={redeemProduct} />
+        <ActionModal item={selectedProject} done={!backendState && redeemedProjectIds.includes(selectedProject.id)} balance={points} defaultShipping={{ recipientName: backendState?.consumerSettings.deliveryRecipientName ?? backendState?.consumer.displayName ?? "", recipientPhone: backendState?.consumerSettings.deliveryPhone ?? "", postalCode: backendState?.consumerSettings.deliveryPostalCode ?? "", shippingCity: backendState?.consumerSettings.deliveryCity ?? backendState?.consumer.city ?? "", shippingDistrict: backendState?.consumerSettings.deliveryDistrict ?? backendState?.consumer.district ?? "", shippingAddress: backendState?.consumerSettings.deliveryAddress ?? "", deliveryNote: backendState?.consumerSettings.deliveryNote ?? "" }} onClose={() => setModal(null)} onConfirm={redeemProduct} />
       )}
       {modal === "receipt" && <ReceiptModal supported={supported} item={receiptProject} onDownload={() => downloadReceipt(receiptProject)} onExplore={goToLocalSupport} onClose={() => setModal(null)} />}
       {modal === "evidence" && (
@@ -2279,6 +2269,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
             {role === "farmer" && farmerPage === "projects" && (
               <FarmerProjectsPage
                 projects={managedFarmerProjects}
+                supporters={backendState?.projectSupporters}
                 onCreate={() => setModal("farmer-project")}
                 onPreview={openLocalProjectStory}
                 onOutcome={openOutcomeReport}
@@ -3714,7 +3705,7 @@ function LocalSupportDashboard({
   ].sort((a, b) => a.actualDistance - b.actualDistance || a.title.localeCompare(b.title, "zh-Hant"));
   const renderProject = (item: LocalProject) => {
     const done = item.kind === "support" ? supportedIds.includes(item.id) : redeemedIds.includes(item.id);
-    const supportUnavailable = item.kind === "support" && Boolean(item.status) && item.status !== "funding" && !done;
+    const supportUnavailable = item.kind === "support" && Boolean(item.status) && item.status !== "funding";
     const supportStatusLabel = item.status === "review" ? "專案審核中" : item.status === "completed" ? "專案已完成" : "專案已下架";
     const projectCity = item.city ?? locationById[item.id]?.city ?? "其他縣市";
     const projectDistrict = item.district ?? locationById[item.id]?.district ?? "合作地區";
@@ -3727,9 +3718,9 @@ function LocalSupportDashboard({
         title={itemName}
         farmerName={item.farmer}
         publicLevel={item.greenFinPublicLevel ?? "LV1"}
-        note={`${location.city}｜${location.district}｜距離你約 ${location.distance} 公里｜推薦分數 ${recommendationScore(item)}｜${item.proof ? `驗證：${item.proof}｜` : ""}${done ? (item.kind === "support" ? `已支持 ${item.points} 點，可查看影響力收據` : "兌換完成，可查看訂單進度") : supportUnavailable ? `${supportStatusLabel}｜${item.note}` : item.note}`}
+        note={`${location.city}｜${location.district}｜距離你約 ${location.distance} 公里｜推薦分數 ${recommendationScore(item)}｜${item.proof ? `驗證：${item.proof}｜` : ""}${supportUnavailable ? `${supportStatusLabel}｜${item.note}` : done ? (item.kind === "support" ? `你已支持過此專案，可再次支持｜${item.note}` : `你已兌換過此商品，可再次兌換｜${item.note}`) : item.note}`}
         progress={item.progress}
-        button={done ? (item.kind === "support" ? "查看成果" : "查看狀態") : supportUnavailable ? supportStatusLabel : item.kind === "support" ? `支持 ${item.points} 點` : `兌換 ${item.points} 點`}
+        button={supportUnavailable ? supportStatusLabel : item.kind === "support" ? `${done ? "再次支持" : "支持"} ${item.points} 點` : `${done ? "再次兌換" : "兌換"} ${item.points} 點`}
         onClick={() => onProject(item.id)}
         onLearnMore={() => onLearnMore(item.id)}
         gold={item.kind === "redeem"}
@@ -3946,13 +3937,25 @@ function FarmerProductsPage({ products, orders, changeRequests, onAdd, onEdit, o
   );
 }
 
+type ProjectSupporter = { consumerId: string; name: string; totalPoints: number; supportCount: number; lastSupportedAt: string };
+
+// Mask the middle of a display name so farmers can recognise supporters without seeing full names.
+function maskSupporterName(name: string) {
+  const chars = [...name.trim()];
+  if (chars.length <= 1) return name;
+  if (chars.length === 2) return `${chars[0]}＊`;
+  return `${chars[0]}${"＊".repeat(chars.length - 2)}${chars[chars.length - 1]}`;
+}
+
 function FarmerProjectsPage({
   projects,
+  supporters: supporterRoster = {},
   onCreate,
   onPreview,
   onOutcome,
 }: {
   projects: LocalProject[];
+  supporters?: Record<string, ProjectSupporter[]>;
   onCreate: () => void;
   onPreview: (id: string) => void;
   onOutcome: (id: string) => void;
@@ -3979,6 +3982,11 @@ function FarmerProjectsPage({
               <div className="progress"><span style={{ width: `${project.progress}%` }} /></div>
               <div className="farmer-project-facts"><span><small>每次支持</small><b>{project.points.toLocaleString()} 點</b></span><span><small>支持人數</small><b>{supporters} 人</b></span><span><small>預期成果</small><b>{project.impact}</b></span></div>
               <div className="farmer-project-allocation"><small>綠點如何支持產地</small><p>{(project.allocations ?? [{ label: "設備與材料", percent: 55 }, { label: "施工與改善", percent: 30 }, { label: "成果追蹤", percent: 15 }]).map((item) => `${item.label} ${item.percent}%`).join("・")}</p></div>
+              <details className="farmer-supporter-roster">
+                <summary>支持者名冊<b>{(supporterRoster[project.id] ?? []).length} 人・{(supporterRoster[project.id] ?? []).reduce((sum, item) => sum + item.totalPoints, 0).toLocaleString()} 點</b></summary>
+                {(supporterRoster[project.id] ?? []).length ? <ol>{(supporterRoster[project.id] ?? []).map((supporter) => <li key={supporter.consumerId}><span>{maskSupporterName(supporter.name)}</span><small>{supporter.supportCount} 次・最近 {formatDbTime(supporter.lastSupportedAt, { year: "numeric", month: "2-digit", day: "2-digit" })}</small><b>{supporter.totalPoints.toLocaleString()} 點</b></li>)}</ol> : <p className="empty-copy">目前還沒有透過平台支持此專案的紀錄。</p>}
+                <small className="farmer-supporter-note">名冊列出平台上實際的支持紀錄；示範專案原有的 DEMO 募集人數不含個人名單。姓名已部分遮蔽以保護隱私。</small>
+              </details>
               <button className="button button-secondary button-block" onClick={() => onPreview(project.id)}>預覽消費者募資頁<ArrowRight /></button>
             </article>
           ))}

@@ -413,7 +413,10 @@ async function initializePlatformSchema(db: DbBinding) {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_farmer_stories_status_published ON farmer_stories(status, published_at DESC)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_farmer_news_farmer_status_created ON farmer_news(farmer_id, status, created_at DESC)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_farmer_news_status_published ON farmer_news(status, published_at DESC)"),
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_project_support_once ON project_supports(consumer_id, project_id)"),
+    // Consumers may support the same project more than once; keep a plain lookup index instead.
+    db.prepare("DROP INDEX IF EXISTS idx_project_support_once"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_project_supports_project ON project_supports(project_id, created_at DESC)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_project_supports_consumer ON project_supports(consumer_id, project_id)"),
     db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_point_ledger_source_once ON point_ledger(user_id, source_id) WHERE source_id IS NOT NULL"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_verification_runs_service_created ON verification_runs(service_key, created_at DESC)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_account_controls_status ON account_controls(status)"),
@@ -1222,8 +1225,9 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       const project = await queryOne<{ farmer_id: string; points: number; target_points: number; raised_points: number; status: string }>(db, "SELECT farmer_id, points, target_points, raised_points, status FROM projects WHERE id = ?", projectId);
       if (!project) throw new Error("找不到改善專案");
       if (project.status !== "funding") throw new Error("此專案目前不接受支持");
-      const existing = await queryOne(db, "SELECT id FROM project_supports WHERE consumer_id = ? AND project_id = ?", consumerId, projectId);
-      if (existing) return { ok: true, duplicate: true };
+      // Repeat support is allowed; count a supporter only on their first support of this project.
+      const firstSupport = !await queryOne(db, "SELECT id FROM project_supports WHERE consumer_id = ? AND project_id = ?", consumerId, projectId);
+      const supportToken = crypto.randomUUID();
       const supportPoints = Math.min(project.points, project.target_points - project.raised_points);
       if (supportPoints <= 0) throw new Error("此專案已達成募集目標");
       const current = await balance(db, consumerId);
@@ -1233,11 +1237,11 @@ export async function applyPlatformAction(db: DbBinding, action: string, body: R
       const unchanged = "EXISTS (SELECT 1 FROM projects WHERE id = ? AND status = 'funding' AND raised_points = ?)";
       await db.batch([
         db.prepare(`INSERT INTO project_supports (consumer_id, project_id, points) SELECT ?, ?, ? WHERE ${unchanged}`).bind(consumerId, projectId, supportPoints, projectId, project.raised_points),
-        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(consumerId, -supportPoints, "project_support", `support:${projectId}`, "支持小農改善專案", projectId, project.raised_points),
-        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(project.farmer_id, supportPoints, "consumer_support", `support:${projectId}`, "收到消費者改善專案支持", projectId, project.raised_points),
-        db.prepare("UPDATE projects SET raised_points = raised_points + ?, supporters = supporters + 1, progress = MIN(100, CAST((raised_points + ?) * 100.0 / target_points AS INTEGER)), status = CASE WHEN raised_points + ? >= target_points THEN 'review' ELSE status END WHERE id = ? AND status = 'funding' AND raised_points = ?").bind(supportPoints, supportPoints, supportPoints, projectId, project.raised_points),
+        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(consumerId, -supportPoints, "project_support", `support:${projectId}:${supportToken}`, "支持小農改善專案", projectId, project.raised_points),
+        db.prepare(`INSERT INTO point_ledger (user_id, delta_points, source_type, source_id, description) SELECT ?, ?, ?, ?, ? WHERE ${unchanged}`).bind(project.farmer_id, supportPoints, "consumer_support", `support:${projectId}:${supportToken}`, "收到消費者改善專案支持", projectId, project.raised_points),
+        db.prepare("UPDATE projects SET raised_points = raised_points + ?, supporters = supporters + ?, progress = MIN(100, CAST((raised_points + ?) * 100.0 / target_points AS INTEGER)), status = CASE WHEN raised_points + ? >= target_points THEN 'review' ELSE status END WHERE id = ? AND status = 'funding' AND raised_points = ?").bind(supportPoints, firstSupport ? 1 : 0, supportPoints, supportPoints, projectId, project.raised_points),
       ]);
-      if (!await queryOne(db, "SELECT id FROM project_supports WHERE consumer_id = ? AND project_id = ?", consumerId, projectId)) throw new Error("專案募集狀態剛更新，請重新整理後再試一次");
+      if (!await hasLedgerSource(db, consumerId, `support:${projectId}:${supportToken}`)) throw new Error("專案募集狀態剛更新，請重新整理後再試一次");
       return { ok: true };
     }
     case "redeem_product": {
@@ -1494,7 +1498,17 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
         ? await queryAll<Record<string, unknown>>(db, `${orderBase} ORDER BY o.created_at DESC, o.id`)
         : [];
   const ledgerRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM point_ledger WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 80", consumerId);
-  const supportRows = await queryAll<{ project_id: string; created_at: string }>(db, "SELECT project_id, created_at FROM project_supports WHERE consumer_id = ?", consumerId);
+  // Oldest first, so the receipt date per project is the first support.
+  const supportRows = await queryAll<{ project_id: string; created_at: string }>(db, "SELECT project_id, created_at FROM project_supports WHERE consumer_id = ? ORDER BY created_at DESC, id DESC", consumerId);
+  // Supporter roster for the farmer's own projects (admins see every project), one row per supporter.
+  const supporterQuery = (where: string) => `SELECT ps.project_id, ps.consumer_id, p.display_name,
+      SUM(ps.points) AS total_points, COUNT(*) AS support_count, MAX(ps.created_at) AS last_supported_at
+      FROM project_supports ps JOIN projects pr ON pr.id = ps.project_id LEFT JOIN profiles p ON p.id = ps.consumer_id
+      ${where} GROUP BY ps.project_id, ps.consumer_id ORDER BY total_points DESC, last_supported_at DESC`;
+  type SupporterRow = { project_id: string; consumer_id: string; display_name: string | null; total_points: number; support_count: number; last_supported_at: string };
+  const supporterRows = viewer?.role === "farmer"
+    ? await queryAll<SupporterRow>(db, supporterQuery("WHERE pr.farmer_id = ?"), farmerId)
+    : viewer?.role === "admin" || !viewer ? await queryAll<SupporterRow>(db, supporterQuery("")) : [];
   const incentiveRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM incentive_programs ORDER BY created_at DESC, id");
   const resourceRows = await queryAll<Record<string, unknown>>(db, "SELECT * FROM resource_offers WHERE status = 'available' ORDER BY required_points");
   const resourceRedemptionRows = viewer?.role === "farmer"
@@ -1741,6 +1755,10 @@ export async function getPlatformSnapshot(db: DbBinding, viewer?: { role: "consu
     ledger: ledgerRows.map((row) => ({ id: Number(row.id), deltaPoints: Number(row.delta_points), sourceType: row.source_type, sourceId: row.source_id, description: row.description, createdAt: row.created_at })),
     supportedProjectIds: supportRows.map((row) => row.project_id),
     supportDates: Object.fromEntries(supportRows.map((row) => [row.project_id, row.created_at])),
+    projectSupporters: supporterRows.reduce<Record<string, Array<{ consumerId: string; name: string; totalPoints: number; supportCount: number; lastSupportedAt: string }>>>((roster, row) => {
+      (roster[row.project_id] ??= []).push({ consumerId: row.consumer_id, name: row.display_name ?? "已移除的帳號", totalPoints: Number(row.total_points), supportCount: Number(row.support_count), lastSupportedAt: row.last_supported_at });
+      return roster;
+    }, {}),
     redeemedProductIds: orderRows.map((row) => row.product_id),
     evidence: evidenceRows.map((row) => ({ id: Number(row.id), title: row.title, evidenceType: row.evidence_type, fileName: row.file_name, contentType: row.content_type, fileSize: row.file_size == null ? null : Number(row.file_size), status: row.status, projectId: row.project_id, productId: row.product_id, submittedAt: row.submitted_at })),
     outcomeReports: outcomeRows.map((row) => ({ id: Number(row.id), institutionId: row.institution_id, projectId: row.project_id, waterLiters: row.water_liters, carbonKg: row.carbon_kg, beneficiaries: row.beneficiaries, note: row.note, status: row.status, submittedAt: row.submitted_at })),

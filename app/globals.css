@@ -2821,3 +2821,14 @@ td svg { width: 17px; }
 @media (max-width: 720px) {
   .admin-topbar-logout { display: inline-flex; padding-inline: 12px; white-space: nowrap; }
 }
+
+/* Farmer project supporter roster */
+.farmer-supporter-roster { margin: 14px 0; padding: 12px 14px; border: 1px solid #dfe8df; border-radius: 14px; background: #f8fbf6; }
+.farmer-supporter-roster summary { display: flex; justify-content: space-between; gap: 10px; color: var(--forest-800); font-weight: 800; cursor: pointer; }
+.farmer-supporter-roster summary b { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.farmer-supporter-roster ol { margin: 10px 0 6px; padding: 0; display: grid; gap: 6px; list-style: none; max-height: 260px; overflow-y: auto; }
+.farmer-supporter-roster li { padding: 8px 10px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; border-radius: 10px; background: white; }
+.farmer-supporter-roster li span { min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.farmer-supporter-roster li small { grid-column: 1; color: var(--muted); font-size: 12px; }
+.farmer-supporter-roster li b { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--forest-800); }
+.farmer-supporter-note { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
