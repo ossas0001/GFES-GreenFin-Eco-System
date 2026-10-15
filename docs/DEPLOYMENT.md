@@ -71,3 +71,7 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 - New OAuth client `GFES GreenFin Production Web Client` (project gfes-green-consumption) with origins/callbacks for https://gfes-green-consumption.pages.dev and http://localhost:4310. The older `GFES Web Client` was left unchanged because gfes.pages.dev still uses it.
 - Backend Worker secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (secret entered by the owner).
 - Current Worker: `ff8a5bc4-1db4-4501-b24d-d817dcf3d688` (PR #4) logs Google token-exchange error codes without secrets. First live attempt failed at the token exchange; retest after Google propagation.
+
+## 2026-10-15 mobile navigation release
+
+- Current Worker: `f15aed22-e6a8-4500-93ae-f9ae86f57d23` (PR #5): removed the mobile 首頁 item that logged users out; admin mobile logout moved to the top bar. Previous: `ff8a5bc4-1db4-4501-b24d-d817dcf3d688`.
