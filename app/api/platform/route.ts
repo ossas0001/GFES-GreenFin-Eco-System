@@ -59,6 +59,7 @@ function snapshotForRole(snapshot: PlatformSnapshot, role: PlatformRole, profile
   const secured = { ...snapshot, admin: emptyAdmin };
   if (role === "consumer") return {
     ...secured,
+    projectSupporters: {},
     farmerStory: null,
     farmerNews: [],
     projects: secured.projects.filter((item) => item.status !== "hidden"),
@@ -94,6 +95,7 @@ function snapshotForRole(snapshot: PlatformSnapshot, role: PlatformRole, profile
   }
   return {
     ...secured,
+    projectSupporters: {},
     farmerStory: null,
     farmerNews: [],
     consumerNews: [],
