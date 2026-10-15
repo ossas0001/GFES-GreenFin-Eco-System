@@ -47,7 +47,7 @@ img { display: block; max-width: 100%; }
 .admin-exit { margin-top: auto; width: 100%; }
 .admin-main { min-width: 0; padding: 34px clamp(22px, 4vw, 54px) 70px; }
 .admin-topbar { margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.admin-topbar span { color: #6c7f74; font-size: 13px; font-weight: 800; }
+.admin-topbar > div:first-child > span { color: #6c7f74; font-size: 13px; font-weight: 800; }
 .admin-topbar h1 { margin: 5px 0 0; color: #123a2c; font-size: clamp(27px, 3vw, 38px); }
 .admin-alert, .admin-notice { margin-bottom: 20px; padding: 14px 16px; border-radius: 13px; font-weight: 800; }
 .admin-alert { color: #8c2d27; background: #fff0ed; }
@@ -253,8 +253,9 @@ img { display: block; max-width: 100%; }
   .admin-sidebar { display: none; }
   .admin-main { padding: 22px 14px 32px; }
   .admin-topbar { align-items: flex-start; }
-  .admin-topbar > button { min-width: 46px; width: 46px; padding: 0; font-size: 0; }
-  .admin-topbar > button svg { margin: 0; }
+  .admin-topbar-actions > button:not(.admin-topbar-logout) { min-width: 46px; width: 46px; padding: 0; }
+  .admin-topbar-actions > button:not(.admin-topbar-logout) span { display: none; }
+  .admin-topbar-actions svg { margin: 0; }
   .admin-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .admin-metrics article { min-height: 145px; padding: 16px; }
   .admin-overview-grid { grid-template-columns: 1fr; }
@@ -1216,7 +1217,7 @@ td svg { width: 17px; }
     box-shadow: 0 15px 40px rgb(27 60 43 / .16);
     backdrop-filter: blur(14px);
   }
-  .mobile-nav-consumer { grid-template-columns: repeat(7, 1fr); }
+  .mobile-nav-consumer { grid-template-columns: repeat(6, 1fr); }
   .mobile-nav.mobile-nav-consumer button { font-size: 11px; }
   .mobile-nav button { min-height: 62px; display: grid; place-items: center; gap: 2px; color: var(--muted); font-size: 13px; border: 0; border-radius: 14px; background: transparent; }
   .mobile-nav button.active { color: var(--forest-800); background: #eef5e9; }
@@ -2036,7 +2037,7 @@ td svg { width: 17px; }
 @media (max-width: 780px) {
   .login-photo { height: 210px; min-height: 210px; }
   .role-option { height: auto; min-height: 82px; }
-  .mobile-nav-farmer { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .mobile-nav-farmer { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .mobile-nav-farmer button { min-width: 0; padding-inline: 2px; font-size: 11px; }
 }
 @media (max-width: 480px) {
@@ -2441,8 +2442,8 @@ td svg { width: 17px; }
   .dashboard-shell .mobile-card-table td > * { justify-self: end; }
   .dashboard-shell .mobile-nav { inset: auto 12px 12px; padding: 7px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-shell .mobile-nav-consumer,
-  .dashboard-shell .mobile-nav-farmer { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .dashboard-shell .mobile-nav-institution { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .dashboard-shell .mobile-nav-farmer { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .dashboard-shell .mobile-nav-institution { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .dashboard-shell .mobile-nav button { min-height: 54px; padding: 3px; font-size: 11px; }
   .dashboard-shell .modal-backdrop { padding: 10px; }
   .dashboard-shell .modal { max-height: calc(100vh - 20px); border-radius: 20px; }
@@ -2812,4 +2813,11 @@ td svg { width: 17px; }
 /* With the desktop sidebar the order detail column gets ~280px around 1024px wide; stack it instead. */
 @media (max-width: 1180px) {
   .order-layout, .dashboard-shell .order-layout { grid-template-columns: 1fr; }
+}
+
+/* Admin logout lives in the sidebar on desktop and in the top bar on phones. */
+.admin-topbar-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+.admin-topbar-logout { display: none; }
+@media (max-width: 720px) {
+  .admin-topbar-logout { display: inline-flex; padding-inline: 12px; white-space: nowrap; }
 }

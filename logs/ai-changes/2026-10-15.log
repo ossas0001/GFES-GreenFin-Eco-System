@@ -28,3 +28,11 @@ Gate: npm test 49/49, tsc pass.
 - First live attempt failed at the token exchange. Added a log line with only Google error code/description, public client id and redirect URI; trimmed configured client id/secret.
 
 Gate: tsc, lint 0 errors, npm test 49/49.
+
+2026-10-15 — Remove misleading mobile "home" button
+
+- The last mobile nav item for consumer, farmer and institution was labelled 首頁 with a logout icon and actually logged the user out. Removed it; logout stays in the account menu. Rebalanced nav columns (6/6/5).
+- Admin mobile: moved logout from the bottom nav to a labelled 登出 button in the top bar.
+- Google OAuth diagnosis: production logs show invalid_client (secret value did not have the expected GOCSPX- prefix); owner to re-enter the secret.
+
+Gate: tsc, lint 0 errors, npm test 49/49.
