@@ -38,3 +38,5 @@ Gate: tsc, lint 0 errors, npm test 49/49.
 Gate: tsc, lint 0 errors, npm test 49/49.
 
 - Incident (Google secret overwritten by concurrent deploy, then API hang from an incomplete build) recorded in docs/DEPLOYMENT.md. Current Worker ad182251; Google login confirmed by owner on the version carrying the owner-entered secret.
+
+- Final release 967d5a8c: mobile navigation fix plus owner-entered Google secret; owner confirmed Google login works.

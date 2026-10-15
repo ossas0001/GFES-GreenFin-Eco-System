@@ -82,3 +82,10 @@ No further GitHub or Cloudflare credential is needed for the deployed Demo. Do n
 - Recovery attempt redeployed `e6871777` from a build produced while the local dev server was running; the build was incomplete and every API request hung (requests ended as Canceled). Mitigated by rolling back to `f15aed22`, then to `cd1ea192` (owner secret, code from PR #4).
 - Owner confirmed Google login works on `cd1ea192`. Redeployed the mobile navigation change from a clean build (`dist` removed, dev server stopped) as `ad182251-51d5-4271-a240-85148f4e0778`; APIs respond in about 0.3 s and the new stylesheet is served.
 - Lessons: never deploy while a secret is being changed; always confirm `Build complete` from a clean `dist` with the dev server stopped before `wrangler deploy`.
+
+## 2026-10-15 final release: mobile navigation + Google secret
+
+- Root cause of the repeated secret loss: a new Worker version inherits secrets from the most recently uploaded version, not from the active one. Rollbacks do not create versions, so deploys after a rollback re-applied the old secret.
+- Fix: uploaded the clean mobile-navigation build without deploying (`7d2567b1`), the owner added the secret with `wrangler versions secret put` (`967d5a8c`), then deployed it with `wrangler versions deploy 967d5a8c@100%`.
+- Current Worker: `967d5a8c-1b13-4028-8f41-1d4f50df5031`. APIs respond normally, new stylesheet served, owner confirmed Google login succeeds.
+- Rule going forward: after any rollback, do not `wrangler deploy` directly if secrets changed; upload the version, add secrets with `wrangler versions secret put`, then deploy that version.
