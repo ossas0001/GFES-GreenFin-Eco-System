@@ -74,8 +74,8 @@ export async function GET(request: Request) {
       db.prepare("SELECT * FROM greenfin_indicator_results WHERE farmer_id = ? AND rule_version = ? ORDER BY calculated_at DESC").bind(farmerId, engine.version).all<Record<string, unknown>>(),
       db.prepare("SELECT * FROM greenfin_data_health_results WHERE farmer_id = ? AND rule_version = ? ORDER BY calculated_at DESC").bind(farmerId, engine.version).all<Record<string, unknown>>(),
       db.prepare(`SELECT COUNT(*) AS document_count,
-        COALESCE(SUM(CASE WHEN status IN ('NORMALIZED', 'VERIFIED') THEN 1 ELSE 0 END), 0) AS processed_document_count,
-        COALESCE(SUM(CASE WHEN status = 'VERIFIED' THEN 1 ELSE 0 END), 0) AS verified_document_count
+        COALESCE(SUM(CASE WHEN status IN ('SUBMITTED', 'APPROVED', 'REJECTED', 'NORMALIZED', 'VERIFIED') THEN 1 ELSE 0 END), 0) AS processed_document_count,
+        COALESCE(SUM(CASE WHEN status IN ('APPROVED', 'VERIFIED') THEN 1 ELSE 0 END), 0) AS verified_document_count
         FROM greenfin_documents WHERE farmer_id = ?`).bind(farmerId).first<Record<string, number>>(),
       db.prepare("SELECT COUNT(*) AS count FROM greenfin_actions WHERE farmer_id = ? AND is_active = 1").bind(farmerId).first<{ count: number }>(),
       db.prepare(`SELECT COUNT(*) AS count FROM greenfin_anomalies anomaly

@@ -14,3 +14,10 @@
 Gate: verified locally; see logs/test-results/2026-10-15-qa-review-fixes.txt.
 
 - Deployed Worker 59f8380b-0a36-47a8-956c-446e9af9d9cd to production from PR #2 (previous fb5136ee). No remote D1 migration. Public production smoke checks recorded in docs/DEPLOYMENT.md; signed-in production flows not verified by the agent.
+
+2026-10-15 — GreenFin progress counts reviewed documents
+
+- The GreenFin workspace progress counted only NORMALIZED/VERIFIED documents, while the farmer dashboard also counted SUBMITTED/APPROVED/REJECTED as processed and APPROVED as verified. Aligned the results route with the dashboard so government-approved documents complete the processing and verification stages.
+- Demo farmer data on production: added a complete DEMO resubmission as evidence for the 11 demo actions, reviewed the superseded missing-date anomaly with user approval, recalculated (650 XP, L4).
+
+Gate: npm test 49/49, tsc pass.
