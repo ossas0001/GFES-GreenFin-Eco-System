@@ -1,0 +1,4 @@
+2026-10-17 — Undefined .span-6 grid class
+
+- Bank / institution GreenFin view used .span-6 for the "四大分析指標" and "Data Health" panels, but the class was never defined, so each panel collapsed to one grid column (~111px wide at 1920px).
+- Defined .span-6 { grid-column: span 6; } and added it to the ≤900px and ≤1400px container stacking rules alongside the other span classes.
