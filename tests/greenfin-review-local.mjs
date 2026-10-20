@@ -22,13 +22,13 @@ async function jsonResponse(path, session, options = {}) {
 
 const farmer = await login("farmer", "farmer001");
 const institution = await login("institution", "institution001");
-const pdf = await readFile(new URL("../public/documents/GFES_GreenFin_DEMO_已核驗友善耕作行動證明.pdf", import.meta.url));
+const pdf = await readFile(new URL("../public/documents/GFES_GreenFin_已核驗友善耕作行動證明.pdf", import.meta.url));
 const uniquePdf = new Uint8Array([...pdf, ...new TextEncoder().encode(`\n% DEMO local review ${randomUUID()}\n`)]);
 const form = new FormData();
 form.set("domain", "CERTIFICATION");
 form.set("sourceLevel", "V1");
 form.set("uploadNote", "DEMO／SIMULATED 本機政府審批測試");
-form.set("file", new File([uniquePdf], "GFES_GreenFin_DEMO_已核驗友善耕作行動證明.pdf", { type: "application/pdf" }));
+form.set("file", new File([uniquePdf], "GFES_GreenFin_已核驗友善耕作行動證明.pdf", { type: "application/pdf" }));
 const uploadResponse = await fetch(`${baseUrl}/api/greenfin/documents`, { method: "POST", headers: headers(farmer, true), body: form });
 const upload = await uploadResponse.json();
 assert.equal(uploadResponse.status, 200, JSON.stringify(upload));

@@ -44,19 +44,19 @@ export async function POST(request: Request) {
     const statements = [
       db.prepare(`INSERT OR IGNORE INTO greenfin_documents
         (id, farmer_id, original_name, file_sha256, storage_key, mime_type, file_size, domain, source_level, status, upload_note)
-        VALUES (?, ?, 'DEMO_SIMULATED_已核驗有機認證.pdf', ?, ?, 'application/pdf', ?, 'CERTIFICATION', 'V2', 'VERIFIED', 'DEMO／SIMULATED 假資料：示範已完成來源核驗的第三方認證文件。')`)
+        VALUES (?, ?, '已核驗有機認證.pdf', ?, ?, 'application/pdf', ?, 'CERTIFICATION', 'V2', 'VERIFIED', '已完成來源核驗的第三方認證文件。')`)
         .bind(verifiedDocumentId, session.profileId, verifiedHash, verifiedStorageKey, verifiedBytes.byteLength),
       db.prepare(`INSERT OR IGNORE INTO greenfin_documents
         (id, farmer_id, original_name, file_sha256, storage_key, mime_type, file_size, domain, source_level, status, upload_note)
-        VALUES (?, ?, 'DEMO_SIMULATED_待補件節水紀錄.pdf', ?, ?, 'application/pdf', ?, 'GREEN_ACTION', 'V1', 'OCR_COMPLETED', 'DEMO／SIMULATED 假資料：執行日期尚未辨識，請在補件畫面確認。')`)
+        VALUES (?, ?, '待補件節水紀錄.pdf', ?, ?, 'application/pdf', ?, 'GREEN_ACTION', 'V1', 'OCR_COMPLETED', '執行日期尚未辨識，請在補件畫面確認。')`)
         .bind(pendingDocumentId, session.profileId, pendingHash, pendingStorageKey, pendingBytes.byteLength),
       db.prepare(`INSERT OR IGNORE INTO greenfin_document_fields
         (id, document_id, field_name, raw_value, normalized_value, confidence, source)
-        VALUES (?, ?, '認證機構', 'DEMO 第三方驗證單位（SIMULATED）', 'DEMO 第三方驗證單位（SIMULATED）', 0.96, 'demo')`)
+        VALUES (?, ?, '認證機構', '綠田第三方驗證中心', '綠田第三方驗證中心', 0.96, 'demo')`)
         .bind(`GFF-DEMO-CERT-ORG-${session.profileId}`, verifiedDocumentId),
       db.prepare(`INSERT OR IGNORE INTO greenfin_document_fields
         (id, document_id, field_name, raw_value, normalized_value, confidence, source)
-        VALUES (?, ?, '認證類型', '友善耕作驗證（SIMULATED）', '友善耕作驗證（SIMULATED）', 0.94, 'demo')`)
+        VALUES (?, ?, '認證類型', '友善耕作驗證', '友善耕作驗證', 0.94, 'demo')`)
         .bind(`GFF-DEMO-CERT-TYPE-${session.profileId}`, verifiedDocumentId),
       db.prepare(`INSERT OR IGNORE INTO greenfin_document_fields
         (id, document_id, field_name, raw_value, normalized_value, confidence, source)
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         .bind(`GFF-DEMO-CERT-EXPIRY-${session.profileId}`, verifiedDocumentId),
       db.prepare(`INSERT OR IGNORE INTO greenfin_document_fields
         (id, document_id, field_name, raw_value, confidence, source)
-        VALUES (?, ?, '活動名稱', '節水灌溉操作紀錄（DEMO SIMULATED）', 0.93, 'demo')`)
+        VALUES (?, ?, '活動名稱', '節水灌溉操作紀錄', 0.93, 'demo')`)
         .bind(`GFF-DEMO-ACTION-NAME-${session.profileId}`, pendingDocumentId),
       db.prepare(`INSERT OR IGNORE INTO greenfin_document_fields
         (id, document_id, field_name, raw_value, confidence, source)
@@ -77,27 +77,27 @@ export async function POST(request: Request) {
       db.prepare(`INSERT OR IGNORE INTO greenfin_standardized_records
         (id, document_id, farmer_id, domain, record_type, data_json, source_level, is_valid)
         VALUES (?, ?, ?, 'CERTIFICATION', 'certification_record', ?, 'V2', 1)`)
-        .bind(verifiedRecordId, verifiedDocumentId, session.profileId, JSON.stringify({ 認證機構: "DEMO 第三方驗證單位（SIMULATED）", 認證類型: "友善耕作驗證（SIMULATED）", 有效期限: "2027-12-31" })),
+        .bind(verifiedRecordId, verifiedDocumentId, session.profileId, JSON.stringify({ 認證機構: "綠田第三方驗證中心", 認證類型: "友善耕作驗證", 有效期限: "2027-12-31" })),
       db.prepare(`INSERT OR IGNORE INTO greenfin_verification_results
         (id, record_id, source_level, reason, verified_by, evidence_ids_json)
-        VALUES (?, ?, 'V2', '可查核第三方文件（DEMO SIMULATED）', 'demo-seed', ?)`)
+        VALUES (?, ?, 'V2', '可查核第三方文件', 'demo-seed', ?)`)
         .bind(`GFV-DEMO-${session.profileId}`, verifiedRecordId, JSON.stringify([verifiedDocumentId])),
       db.prepare(`INSERT OR IGNORE INTO greenfin_actions
         (id, farmer_id, dimension, action_level, description, action_date, evidence_record_ids_json, is_active)
-        VALUES (?, ?, '綠色治理', 'CERTIFIED', 'DEMO／SIMULATED 友善耕作驗證', '2026-06-01', ?, 1)`)
+        VALUES (?, ?, '綠色治理', 'CERTIFIED', '友善耕作驗證', '2026-06-01', ?, 1)`)
         .bind(`GFACT-DEMO-${session.profileId}`, session.profileId, JSON.stringify([verifiedRecordId])),
     ];
 
     if (!existingIds.has(verifiedDocumentId)) {
       statements.push(
-        greenFinAuditStatement(db, "DOCUMENT_UPLOADED", session.profileId, "greenfin_document", verifiedDocumentId, { filename: "DEMO_SIMULATED_已核驗有機認證.pdf", mode: "SIMULATED" }),
+        greenFinAuditStatement(db, "DOCUMENT_UPLOADED", session.profileId, "greenfin_document", verifiedDocumentId, { filename: "已核驗有機認證.pdf", mode: "SIMULATED" }),
         greenFinAuditStatement(db, "OCR_COMPLETED", session.profileId, "greenfin_document", verifiedDocumentId, { provider: "DemoSeed", fieldCount: 3, mode: "SIMULATED" }),
-        greenFinAuditStatement(db, "VERIFICATION_UPDATED", session.profileId, "greenfin_record", verifiedRecordId, { sourceLevel: "V2", reason: "可查核第三方文件（DEMO SIMULATED）" }),
+        greenFinAuditStatement(db, "VERIFICATION_UPDATED", session.profileId, "greenfin_record", verifiedRecordId, { sourceLevel: "V2", reason: "可查核第三方文件" }),
       );
     }
     if (!existingIds.has(pendingDocumentId)) {
       statements.push(
-        greenFinAuditStatement(db, "DOCUMENT_UPLOADED", session.profileId, "greenfin_document", pendingDocumentId, { filename: "DEMO_SIMULATED_待補件節水紀錄.pdf", mode: "SIMULATED" }),
+        greenFinAuditStatement(db, "DOCUMENT_UPLOADED", session.profileId, "greenfin_document", pendingDocumentId, { filename: "待補件節水紀錄.pdf", mode: "SIMULATED" }),
         greenFinAuditStatement(db, "OCR_COMPLETED", session.profileId, "greenfin_document", pendingDocumentId, { provider: "DemoSeed", fieldCount: 3, mode: "SIMULATED" }),
       );
     }
@@ -108,9 +108,8 @@ export async function POST(request: Request) {
       demo: true,
       pendingDocumentId,
       verifiedDocumentId,
-      disclaimer: "DEMO／SIMULATED 假資料，僅供介面與核驗流程測試，不代表真實採用或正式驗證。",
-    });
+          });
   } catch (error) {
-    return errorResponse(error, "建立 GreenFin DEMO 核驗資料失敗");
+    return errorResponse(error, "建立 GreenFin 範例核驗資料失敗");
   }
 }

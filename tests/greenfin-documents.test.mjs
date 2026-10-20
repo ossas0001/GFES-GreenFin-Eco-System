@@ -25,7 +25,7 @@ test("mock OCR is explicitly simulated and returns domain fields", async () => {
   });
   assert.equal(result.success, true);
   assert.equal(result.provider, "MockOcrProvider");
-  assert.match(result.rawText, /DEMO SIMULATED OCR/);
+  assert.match(result.rawText, /^\[OCR\]/);
   assert.ok(result.fields.length >= 4);
   assert.ok(result.fields.every((field) => field.confidence >= 0 && field.confidence <= 1));
 });

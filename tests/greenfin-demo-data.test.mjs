@@ -4,9 +4,9 @@ import test from "node:test";
 
 const route = await readFile(new URL("../app/api/greenfin/demo/route.ts", import.meta.url), "utf8");
 
-test("the GreenFin demo fixture is farmer-only, CSRF-protected, and explicitly simulated", () => {
+test("the GreenFin demo fixture is farmer-only, CSRF-protected, carries no DEMO labels in visible text, and keeps simulated mode in audit metadata", () => {
   assert.match(route, /requireAuth\(request, \["farmer"\], true\)/);
-  assert.match(route, /DEMO[／_]SIMULATED/);
+  assert.doesNotMatch(route, /DEMO／SIMULATED|（SIMULATED）/);
   assert.match(route, /mode: "SIMULATED"/);
 });
 

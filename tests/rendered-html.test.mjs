@@ -223,7 +223,7 @@ test("keeps the completed platform and consumer journeys wired", async () => {
   assert.match(demo, /不接受無關的一般照片/);
   assert.match(demo, /FarmerGreenFinPage/);
   assert.match(demo, /選擇 PDF、PNG、JPG 或 HEIC/);
-  assert.match(demo, /上傳並執行 SIMULATED OCR/);
+  assert.match(demo, /上傳並執行 OCR 辨識/);
   assert.match(uploadRoute, /submissionType === "farmer_evidence"/);
   assert.match(uploadRoute, /farmer-evidence\//);
   assert.match(schema, /fileKey: text\("file_key"\)/);

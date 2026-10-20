@@ -39,10 +39,10 @@ test("wires the complete farmer document lifecycle", () => {
   assert.match(ui, /標準化/);
   assert.match(ui, /\/api\/greenfin\/verification/);
   assert.match(ui, /\/api\/greenfin\/results/);
-  assert.match(ui, /SIMULATED OCR/);
+  assert.match(ui, /OCR 辨識/);
   assert.match(ui, /查看與補件/);
   assert.match(ui, /確認欄位並送出補件/);
-  assert.match(ui, /載入 DEMO 核驗資料/);
+  assert.match(ui, /載入範例核驗資料/);
   assert.match(ui, /\/api\/greenfin\/demo/);
   assert.match(ui, /const seen = new Set<string>/);
 });
