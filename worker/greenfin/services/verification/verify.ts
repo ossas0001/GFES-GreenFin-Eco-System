@@ -49,10 +49,10 @@ export function verifyGreenFinRecord(input: VerificationInput): VerificationDeci
 
   if (!reasons.length) {
     reasons.push({
-      V3: "官方／合作系統直接核驗（DEMO SIMULATED）",
-      V2: "可查核第三方文件（DEMO SIMULATED）",
-      V1: "自行提交且部分佐證（DEMO SIMULATED）",
-      V0: "無法使用或確認異常（DEMO SIMULATED）",
+      V3: "官方／合作系統直接核驗",
+      V2: "可查核第三方文件",
+      V1: "自行提交且部分佐證",
+      V0: "無法使用或確認異常",
     }[sourceLevel]);
   }
   return { sourceLevel, reason: reasons.join("；"), evidenceIds: input.evidenceId ? [input.evidenceId] : [] };

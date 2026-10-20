@@ -1,0 +1,9 @@
+2026-10-20 — Remove DEMO / SIMULATED labels from the site (project owner decision)
+
+- Owner asked to remove every DEMO-style label from the pages, including the "simulated / hypothetical value" disclaimers, and to change the AGENTS.md rule that required them. AGENTS.md and docs/PRODUCT_SPEC.md updated; the rule against claiming adoption by banks, government or real farmers stays, and sample documents must not use real organisation names.
+- UI: removed DEMO／SIMULATED eyebrows, "・DEMO" tags on farmer news/stories, "含 N 筆 DEMO" metric deltas, "（含 DEMO／SIMULATED）" table suffixes, SIMULATED OCR wording and the 假資料 admin labels. Rule version now displays as "GreenFin V1" (stored key GREENFIN_DEMO_V1 unchanged so existing results stay linked).
+- Server text: GreenFin sample seed (/api/greenfin/demo), mock OCR fields (real organisation names replaced with 綠田第三方驗證中心 / 在地農會), verification reasons and rule set name no longer carry DEMO/SIMULATED.
+- public/documents: the two GreenFin sample PDFs were rebuilt without watermark/disclaimers and renamed (GFES_GreenFin_*.pdf).
+- Production data: visible text in orders, resource_redemptions, farmer_news, projects, outcome_reports, procurement_requests, action_submissions, greenfin_* tables cleaned with a reviewed SQL script after a full D1 export backup. IDs, rule_version keys, storage keys and GreenFin audit logs left unchanged.
+
+Gate: tsc, lint 0 errors, npm test 49/49; local click-through of 34 role views found no DEMO/SIMULATED/假資料 wording.

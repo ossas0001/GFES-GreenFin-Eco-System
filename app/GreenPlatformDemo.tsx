@@ -1298,7 +1298,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
   }
 
   async function uploadGreenFinDocument(domain: string, uploadNote: string, file: File) {
-    if (!window.confirm(`流程最終確認\n\n確認將「${file.name}」上傳至 GreenFin？\n\n送出後會執行 SIMULATED OCR，仍需您確認欄位。`)) return false;
+    if (!window.confirm(`流程最終確認\n\n確認將「${file.name}」上傳至 GreenFin？\n\n送出後會執行 OCR 辨識，仍需您確認欄位。`)) return false;
     setBackendBusy(true);
     try {
       const form = new FormData();
@@ -1310,7 +1310,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "GreenFin 文件上傳失敗");
       setBackendError("");
-      setToast(`${file.name} 已上傳，SIMULATED OCR 已完成`);
+      setToast(`${file.name} 已上傳，OCR 辨識已完成`);
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "GreenFin 文件上傳失敗";
@@ -2473,7 +2473,7 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         <section className="section section-soft" id="stories">
           <div className="container">
             <header className="section-heading">
-              <span className="eyebrow">DEMO／SIMULATED・從土地開始</span>
+              <span className="eyebrow">從土地開始</span>
               <h2>看見每一份綠色選擇背後的行動</h2>
               <p>從綠色消費、低碳交通、電子帳單到企業與政府激勵，讓每一點支持都有清楚去向，也讓地方農業持續成長。</p>
             </header>
@@ -2510,9 +2510,8 @@ export function GreenPlatformApp({ initialPortal, initialSessionExpected = false
         <section className="section section-dark" id="impact">
           <div className="container">
             <header className="section-heading">
-              <span className="eyebrow">DEMO／SIMULATED・共同影響力</span>
+              <span className="eyebrow">共同影響力</span>
               <h2>讓支持不只是一個數字</h2>
-              <p>以下數字為提案展示用模擬資料，不代表實際交易或環境效益。</p>
             </header>
             <div className="impact-grid">
               <Impact icon={Users} value="128" label="受支持在地農戶" />
@@ -2632,6 +2631,11 @@ function parseDbTime(value: string) {
   return new Date(value.includes("T") || /[+-]\d\d:?\d\d$|Z$/.test(value) ? value : `${value.replace(" ", "T")}Z`);
 }
 
+// Rule set ids are stored as GREENFIN_DEMO_V1; show a neutral label instead of the internal id.
+function formatRuleVersion(version?: string) {
+  return (version ?? "GREENFIN_DEMO_V1").replace(/^GREENFIN_DEMO_/, "GreenFin ").replace(/^GREENFIN_/, "GreenFin ");
+}
+
 function formatDbTime(value: string, options?: Intl.DateTimeFormatOptions) {
   const date = parseDbTime(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-TW", options);
@@ -2647,16 +2651,16 @@ function FarmerNewsFeed({ news, emptyText = "目前尚無小農最新消息。" 
   if (news.length === 0) return <div className="farmer-news-empty"><Newspaper /><p>{emptyText}</p></div>;
   return <div className="farmer-news-grid">{news.map((item) => <article className={`farmer-news-card ${item.image ? "" : "no-image"}`} key={item.id}>
     {item.image && <img src={item.image} alt={`${item.farmerName}・${item.title}`} />}
-    <div><span className="farmer-news-category">{item.category}{item.isDemo ? "・DEMO" : ""}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未建立"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
+    <div><span className="farmer-news-category">{item.category}</span><span className="greenfin-public-level">GreenFin 綠色經驗 {item.greenFinLevel ?? "L0"}・{item.greenFinLevelLabel ?? "尚未建立"}</span><small>{item.city}{item.district}・{formatPublishedAt(item.publishedAt)}</small><h3>{item.title}</h3><p>{item.content}</p><footer><Sprout /><b>{item.farmerName}</b></footer></div>
   </article>)}</div>;
 }
 
 function FarmerUpdatesSection({ stories: farmerStories, news }: PublicContent) {
   if (farmerStories.length === 0 && news.length === 0) return null;
   return <section className="section farmer-updates-section" id="farmer-updates"><div className="container">
-    <header className="section-heading"><span className="eyebrow">產地即時連線</span><h2>小農故事與最新消息</h2><p>小農可更新耕作故事與採收近況；測試帳號內容標示為 DEMO。</p></header>
+    <header className="section-heading"><span className="eyebrow">產地即時連線</span><h2>小農故事與最新消息</h2><p>小農可更新耕作故事與採收近況。</p></header>
     {farmerStories.length > 0 && <div className="farmer-story-grid">{farmerStories.slice(0, 4).map((story) => <article className="farmer-story-card" key={story.farmerId}>
-      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}{story.isDemo ? "・DEMO" : ""}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未建立"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
+      <img src={story.image} alt={`${story.farmerName}農場故事`} /><div><small>{story.city}{story.district}</small><span className="greenfin-public-level">GreenFin 綠色經驗 {story.greenFinLevel ?? "L0"}・{story.greenFinLevelLabel ?? "尚未建立"}</span><h3>{story.headline}</h3><p>{story.summary}</p>{story.quote && <blockquote>「{story.quote}」</blockquote>}<footer><Sprout /><b>{story.farmerName}</b></footer></div>
     </article>)}</div>}
     <div className="farmer-updates-news-heading"><div><span className="eyebrow">最新發布</span><h3>小農最新消息</h3></div><span>共 {news.length} 則</span></div>
     <FarmerNewsFeed news={news.slice(0, 6)} />
@@ -2784,7 +2788,7 @@ const templatePdfFiles: Record<string, string> = {
 
 const greenFinDemoPdfLibrary = [
   {
-    filename: "GFES_GreenFin_DEMO_已核驗友善耕作行動證明.pdf",
+    filename: "GFES_GreenFin_已核驗友善耕作行動證明.pdf",
     title: "已核驗友善耕作行動證明",
     status: "VERIFIED",
     sourceLevel: "V2",
@@ -2793,7 +2797,7 @@ const greenFinDemoPdfLibrary = [
     fields: ["認證機構", "認證類型", "有效期限", "耕作面積"],
   },
   {
-    filename: "GFES_GreenFin_DEMO_待補件節水灌溉行動證明.pdf",
+    filename: "GFES_GreenFin_待補件節水灌溉行動證明.pdf",
     title: "待補件節水灌溉行動證明",
     status: "REJECTED／待補件",
     sourceLevel: "V1",
@@ -2917,7 +2921,7 @@ function AdminDashboard({
           <button className={section === "content" ? "active" : ""} onClick={() => setSection("content")}><ShoppingBasket />內容與計畫</button>
           <button className={section === "reviews" ? "active" : ""} onClick={() => setSection("reviews")}><BadgeCheck />行動審核</button>
           <button className={section === "generator" ? "active" : ""} onClick={() => setSection("generator")}><FileCheck2 />資料生成區</button>
-          <button className={section === "greenfinDemo" ? "active" : ""} onClick={() => setSection("greenfinDemo")}><FileCheck2 />GreenFin PDF 假資料</button>
+          <button className={section === "greenfinDemo" ? "active" : ""} onClick={() => setSection("greenfinDemo")}><FileCheck2 />GreenFin 範例 PDF</button>
           <button className={section === "system" ? "active" : ""} onClick={() => setSection("system")}><ScanLine />API 測試與系統後台</button>
           <button className={section === "parameters" ? "active" : ""} onClick={() => setSection("parameters")}><Monitor />系統參數</button>
           <button className={section === "audit" ? "active" : ""} onClick={() => setSection("audit")}><FileCheck2 />操作紀錄</button>
@@ -2927,7 +2931,7 @@ function AdminDashboard({
 
       <main className="admin-main">
         <header className="admin-topbar">
-          <div><span>GFES 綠色消費循環平台</span><h1>{({ overview: "營運儀表板", accounts: "帳號與角色管理", content: "平台內容與計畫管理", reviews: "消費者行動證明審核", generator: "正式範例資料生成區", greenfinDemo: "GreenFin 完整 PDF 假資料", system: "API 測試與系統後台", parameters: "系統參數設定", audit: "管理員操作紀錄" } as Record<AdminSection, string>)[section]}</h1></div>
+          <div><span>GFES 綠色消費循環平台</span><h1>{({ overview: "營運儀表板", accounts: "帳號與角色管理", content: "平台內容與計畫管理", reviews: "消費者行動證明審核", generator: "正式範例資料生成區", greenfinDemo: "GreenFin 範例 PDF", system: "API 測試與系統後台", parameters: "系統參數設定", audit: "管理員操作紀錄" } as Record<AdminSection, string>)[section]}</h1></div>
           <div className="admin-topbar-actions">
             <button className="button button-secondary" disabled={busy} onClick={onRefresh} aria-label="重新整理"><RefreshCcw /><span>重新整理</span></button>
             <button className="button button-secondary admin-topbar-logout" onClick={onExit}><LogOut />登出</button>
@@ -3143,7 +3147,7 @@ function AdminDashboard({
         </div>}
 
         {section === "greenfinDemo" && <div className="greenfin-demo-admin-section">
-          <section className="admin-card greenfin-demo-admin-intro"><div><span className="admin-role role-farmer">DEMO／SIMULATED ONLY</span><h2>GreenFin 完整 PDF 假資料庫</h2><p>可預覽、下載並用於測試上傳流程。所有人物、單位、編號與數值均為假資料。</p></div><aside><b>{greenFinDemoPdfLibrary.length}</b><span>份完整 PDF</span><small>各 3 頁・A4・繁體中文</small></aside></section>
+          <section className="admin-card greenfin-demo-admin-intro"><div><span className="admin-role role-farmer">GREENFIN</span><h2>GreenFin 範例 PDF 文件庫</h2><p>可預覽、下載並用於上傳流程。</p></div><aside><b>{greenFinDemoPdfLibrary.length}</b><span>份完整 PDF</span><small>各 3 頁・A4・繁體中文</small></aside></section>
           <div className="greenfin-demo-admin-grid">{greenFinDemoPdfLibrary.map((document) => <article className="admin-card greenfin-demo-pdf-card" key={document.filename}>
             <header><span className={`status-pill ${document.status.startsWith("VERIFIED") ? "" : "waiting"}`}>{document.status}</span><small>{document.sourceLevel}・{document.domain}</small></header>
             <div className="greenfin-demo-pdf-icon"><FileCheck2 /><span>PDF</span></div><h2>{document.title}</h2><p>{document.description}</p>
@@ -3985,7 +3989,7 @@ function FarmerProjectsPage({
               <details className="farmer-supporter-roster">
                 <summary>支持者名冊<b>{(supporterRoster[project.id] ?? []).length} 人・{(supporterRoster[project.id] ?? []).reduce((sum, item) => sum + item.totalPoints, 0).toLocaleString()} 點</b></summary>
                 {(supporterRoster[project.id] ?? []).length ? <ol>{(supporterRoster[project.id] ?? []).map((supporter) => <li key={supporter.consumerId}><span>{maskSupporterName(supporter.name)}</span><small>{supporter.supportCount} 次・最近 {formatDbTime(supporter.lastSupportedAt, { year: "numeric", month: "2-digit", day: "2-digit" })}</small><b>{supporter.totalPoints.toLocaleString()} 點</b></li>)}</ol> : <p className="empty-copy">目前還沒有透過平台支持此專案的紀錄。</p>}
-                <small className="farmer-supporter-note">名冊列出平台上實際的支持紀錄；示範專案原有的 DEMO 募集人數不含個人名單。姓名已部分遮蔽以保護隱私。</small>
+                <small className="farmer-supporter-note">名冊列出平台上的支持紀錄；專案原有的募集人數不含個人名單。姓名已部分遮蔽以保護隱私。</small>
               </details>
               <button className="button button-secondary button-block" onClick={() => onPreview(project.id)}>預覽消費者募資頁<ArrowRight /></button>
             </article>
@@ -4070,19 +4074,17 @@ function InstitutionDashboard({
   const totalBudget = programs.reduce((sum, program) => sum + program.budgetPoints, 0);
   const participants = programs.reduce((sum, program) => sum + Number(program.participants.replace(/[^0-9]/g, "") || 0), 0);
   const verifiedOutcomes = outcomes.filter((outcome) => outcome.status === "verified");
-  const demoVerifiedCount = verifiedOutcomes.filter((outcome) => /DEMO|SIMULATED|MOCK/i.test(outcome.note)).length;
   const carbonKg = verifiedOutcomes.reduce((sum, outcome) => sum + Number(outcome.carbonKg ?? 0), 0);
   const chartData = programs.length ? programs.map((program) => ({ name: program.name, funds: program.budgetPoints })) : [{ name: "尚無計畫", funds: 0 }];
   const procurementQuantity = procurements.reduce((sum, item) => sum + item.quantity, 0);
   const procurementBudget = procurements.reduce((sum, item) => sum + item.budgetPoints, 0);
-  const demoProcurements = procurements.filter((item) => /DEMO|SIMULATED|MOCK/i.test(item.title)).length;
   return (
     <>
       <div className="metrics">
         <Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} />
         <Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶計畫累計" />
-        <Metric icon={ShoppingBasket} value={`${procurements.length} 筆`} label="永續採購需求" delta={demoProcurements ? `含 ${demoProcurements} 筆 DEMO` : "本帳戶建立"} detail={procurements.length ? `${procurementQuantity.toLocaleString()} 份採購 · ${procurementBudget.toLocaleString()} 點預算` : "尚無採購需求"} />
-        <Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={demoVerifiedCount ? `含 ${demoVerifiedCount} 筆 DEMO` : `${verifiedOutcomes.length} 筆成果`} detail={demoVerifiedCount ? "SIMULATED・非實際量測" : verifiedOutcomes.length ? `${carbonKg.toLocaleString()} kg CO₂e · 已審核` : "尚無已審核成果"} />
+        <Metric icon={ShoppingBasket} value={`${procurements.length} 筆`} label="永續採購需求" delta="本帳戶建立" detail={procurements.length ? `${procurementQuantity.toLocaleString()} 份採購 · ${procurementBudget.toLocaleString()} 點預算` : "尚無採購需求"} />
+        <Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={`${verifiedOutcomes.length} 筆成果`} detail={verifiedOutcomes.length ? `${carbonKg.toLocaleString()} kg CO₂e · 已審核` : "尚無已審核成果"} />
       </div>
       <div className="dashboard-grid">
         <Panel className="span-8" title="本帳戶綠點激勵計畫" note="只顯示目前登入單位建立的計畫與預算">
@@ -4554,20 +4556,20 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
   }
 
   async function loadDemoVerificationData() {
-    if (!window.confirm("載入 DEMO／SIMULATED GreenFin 假資料？\n\n將建立一份待補件文件、一份已核驗文件與一筆示範綠色行動，僅供流程測試。")) return;
+    if (!window.confirm("載入 GreenFin 範例核驗資料？\n\n將建立一份待補件文件、一份已核驗文件與一筆綠色行動。")) return;
     setWorking(true);
     try {
       const demoResponse = await fetch("/api/greenfin/demo", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: "{}" });
       const demo = await demoResponse.json() as { error?: string; pendingDocumentId?: string };
-      if (!demoResponse.ok || !demo.pendingDocumentId) throw new Error(demo.error || "建立 DEMO 核驗資料失敗");
+      if (!demoResponse.ok || !demo.pendingDocumentId) throw new Error(demo.error || "建立範例核驗資料失敗");
       const calculationResponse = await fetch("/api/greenfin/results", { method: "POST", headers: { ...headers, "x-gfes-csrf": csrfToken, "content-type": "application/json" }, body: "{}" });
       const calculation = await calculationResponse.json() as { error?: string };
-      if (!calculationResponse.ok) throw new Error(calculation.error || "DEMO 資料計算失敗");
+      if (!calculationResponse.ok) throw new Error(calculation.error || "範例資料計算失敗");
       await Promise.all([loadGreenFin(), onChanged()]);
       await openDocument(demo.pendingDocumentId);
-      onToast("DEMO／SIMULATED 假資料已建立，待補件畫面已開啟");
+      onToast("範例核驗資料已建立，待補件畫面已開啟");
     } catch (error) {
-      onToast(error instanceof Error ? error.message : "建立 DEMO 核驗資料失敗");
+      onToast(error instanceof Error ? error.message : "建立範例核驗資料失敗");
     } finally {
       setWorking(false);
     }
@@ -4612,20 +4614,20 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
       <div className="greenfin-progress-card"><div><span>數位履歷建置進度</span><strong>{summary?.progressPercent ?? 0}%</strong></div><div className="progress"><span style={{ width: `${summary?.progressPercent ?? 0}%` }} /></div><p>{summary?.nextAction ?? "上傳第一份原始文件"}</p><small>{summary?.completedStageCount ?? 0}／{summary?.totalStageCount ?? 5} 階段完成</small><div className="greenfin-progress-actions"><button className="button button-primary" onClick={() => { setDocumentDetail(null); setSection("documents"); }}><Upload />上傳文件</button><button className="button button-secondary" onClick={openPendingDocuments}><FileCheck2 />待補件 {pendingDocuments.length}</button></div></div>
       <div className="greenfin-stage-list">{(summary?.stages ?? []).map((stage) => { const next = stageAction(stage.id); return <Evidence key={stage.id} title={stage.label} note={stage.detail} done={stage.complete} actionLabel={next.label} onAction={next.action} />; })}</div>
     </section>}
-    {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><strong className="greenfin-inline-level">{summary?.level ?? "L0"}・{summary?.levelLabel ?? "尚未建立"}</strong><small>規則版本：{summary?.ruleVersion ?? "GREENFIN_DEMO_V1"}</small>{summary?.nextLevel && <p className="greenfin-next-level">距離 {summary.nextLevel} 尚差 {summary.pointsToNextLevel} 經驗值</p>}</Panel>}
+    {(section === "dashboard" || section === "experience") && <Panel className="span-4" title="綠色經驗值" note="四構面年度各 250，上限合計 1,000"><div className="metric-number">{experienceTotal.toLocaleString()}</div><strong className="greenfin-inline-level">{summary?.level ?? "L0"}・{summary?.levelLabel ?? "尚未建立"}</strong><small>規則版本：{formatRuleVersion(summary?.ruleVersion)}</small>{summary?.nextLevel && <p className="greenfin-next-level">距離 {summary.nextLevel} 尚差 {summary.pointsToNextLevel} 經驗值</p>}</Panel>}
     {section === "experience" && <Panel className="span-8" title="四構面累積" note="各構面獨立累積，不合成信用分數"><div className="greenfin-dimension-grid">{Object.entries(summary?.dimensions ?? { 減量: 0, 增匯: 0, 循環: 0, 綠色治理: 0 }).map(([dimension, value]) => <article key={dimension}><div><span>{dimension}</span><strong>{value.toLocaleString()}／{summary?.annualLimitPerDimension ?? 250}</strong></div><div className="progress"><span style={{ width: `${Math.min(100, value / (summary?.annualLimitPerDimension ?? 250) * 100)}%` }} /></div></article>)}</div><p className="fine-print">有效經驗值＝行為基礎值 × 來源認列比例；由後端依規則版本計算。</p></Panel>}
     {(section === "dashboard" || section === "indicators") && <Panel className="span-4" title="四大分析指標" note="彼此獨立，不合成總分"><div className="evidence-list">{indicators.length ? indicators.map((item) => <Evidence key={String(item.indicator_type)} title={greenFinIndicatorLabels[String(item.indicator_type)] ?? String(item.indicator_type)} note={`${Number(item.score).toFixed(1)}／100・${String(item.level)}`} done />) : <p className="empty-copy">尚未計算指標。</p>}</div></Panel>}
     {(section === "dashboard" || section === "health") && <Panel className="span-4" title="Data Health" note="GRAY／RED／YELLOW／GREEN"><div className="evidence-list">{health.length ? health.map((item) => <Evidence key={String(item.domain)} title={greenFinDomains.find(([key]) => key === item.domain)?.[1] ?? String(item.domain)} note={String(item.status)} done={item.status === "GREEN"} />) : <p className="empty-copy">尚未計算資料健康度。</p>}</div></Panel>}
     {section === "documents" && <>
-      <Panel className="span-5" title="上傳原始文件" note="原檔存 R2；OCR 為明確標示的 SIMULATED 模式">
-        <form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、PNG、JPG 或 HEIC"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept=".pdf,.png,.jpg,.jpeg,.heic,application/pdf,image/png,image/jpeg,image/heic,image/heif" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 SIMULATED OCR</button></form>
-        <div className="greenfin-demo-loader"><BadgeCheck /><div><b>需要可操作的驗證假資料？</b><small>建立一份待補件與一份已核驗文件，所有內容都標示 DEMO／SIMULATED。</small></div><button type="button" className="button button-secondary" disabled={working} onClick={() => void loadDemoVerificationData()}>{working ? "建立中…" : "載入 DEMO 核驗資料"}</button></div>
+      <Panel className="span-5" title="上傳原始文件" note="原檔存 R2；上傳後自動 OCR 辨識欄位">
+        <form className="farmer-evidence-upload" onSubmit={submit}><label>資料領域<select value={domain} onChange={(event) => setDomain(event.target.value)}>{greenFinDomains.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>文件說明<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} /></label><div className="upload-box"><Upload /><b>{file?.name ?? "選擇 PDF、PNG、JPG 或 HEIC"}</b><small>檔案上限 10 MB；上傳後須人工確認 OCR 欄位</small><input type="file" accept=".pdf,.png,.jpg,.jpeg,.heic,application/pdf,image/png,image/jpeg,image/heic,image/heif" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></div><button className="button button-primary button-block" disabled={busy || working || !file}>上傳並執行 OCR 辨識</button></form>
+        <div className="greenfin-demo-loader"><BadgeCheck /><div><b>需要可操作的範例文件？</b><small>建立一份待補件與一份已核驗文件，可直接演練核驗流程。</small></div><button type="button" className="button button-secondary" disabled={working} onClick={() => void loadDemoVerificationData()}>{working ? "建立中…" : "載入範例核驗資料"}</button></div>
       </Panel>
       <Panel className="span-7" title="文件處理佇列" note={`${documents.length} 份文件・${pendingDocuments.length} 份待處理`}>
-        {documents.length ? <div className="evidence-list">{documents.map((document) => <article className={`evidence-item greenfin-document-row ${documentDetail?.document.id === document.id ? "selected" : ""}`} key={document.id}><div><strong>{document.original_name}</strong><small>{greenFinDomains.find(([key]) => key === document.domain)?.[1] ?? document.domain}・{document.source_level}</small><span className={`status-pill ${document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[document.status] ?? document.status}</span>{document.review_decision && <small>政府審批：{document.review_decision === "PENDING" ? "待審批" : document.review_decision === "APPROVED" ? "已核准" : "退回補件"}</small>}</div><button className="button button-secondary" disabled={detailLoading} onClick={() => void openDocument(document.id)}>{document.status === "VERIFIED" ? "查看核驗結果" : "查看與補件"}</button></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件，可從左側上傳或載入 DEMO 核驗資料。</p>}
+        {documents.length ? <div className="evidence-list">{documents.map((document) => <article className={`evidence-item greenfin-document-row ${documentDetail?.document.id === document.id ? "selected" : ""}`} key={document.id}><div><strong>{document.original_name}</strong><small>{greenFinDomains.find(([key]) => key === document.domain)?.[1] ?? document.domain}・{document.source_level}</small><span className={`status-pill ${document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[document.status] ?? document.status}</span>{document.review_decision && <small>政府審批：{document.review_decision === "PENDING" ? "待審批" : document.review_decision === "APPROVED" ? "已核准" : "退回補件"}</small>}</div><button className="button button-secondary" disabled={detailLoading} onClick={() => void openDocument(document.id)}>{document.status === "VERIFIED" ? "查看核驗結果" : "查看與補件"}</button></article>)}</div> : <p className="empty-copy">尚未上傳 GreenFin 文件，可從左側上傳或載入範例核驗資料。</p>}
       </Panel>
-      {documentDetail && <Panel className="span-12 greenfin-document-workspace" title="文件補件與核驗" note="逐欄確認後依序完成標準化與來源核驗；所有 DEMO 資料均不得作為真實授信依據">
-        <div className="greenfin-document-head"><div><span className="eyebrow">{documentDetail.document.original_name.includes("DEMO") ? "DEMO／SIMULATED" : "GREENFIN DOCUMENT"}</span><h3>{documentDetail.document.original_name}</h3><p>{documentDetail.document.upload_note || "未填寫文件說明"}</p></div><span className={`status-pill ${documentDetail.document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[documentDetail.document.status] ?? documentDetail.document.status}</span></div>
+      {documentDetail && <Panel className="span-12 greenfin-document-workspace" title="文件補件與核驗" note="逐欄確認後依序完成標準化與來源核驗">
+        <div className="greenfin-document-head"><div><span className="eyebrow">GREENFIN DOCUMENT</span><h3>{documentDetail.document.original_name}</h3><p>{documentDetail.document.upload_note || "未填寫文件說明"}</p></div><span className={`status-pill ${documentDetail.document.status === "VERIFIED" ? "" : "waiting"}`}>{greenFinDocumentStatusLabels[documentDetail.document.status] ?? documentDetail.document.status}</span></div>
         {documentDetail.review && <div className={`greenfin-verification-result ${documentDetail.review.decision === "REJECTED" ? "review-rejected" : ""}`}><BadgeCheck /><div><b>{documentDetail.review.decision === "APPROVED" ? "政府審批：已核准" : "政府審批：退回補件"}</b><p>{documentDetail.review.reviewNote || "未填寫額外說明"}</p></div></div>}
         {documentDetail.reviewState === "PENDING" && <div className="greenfin-verification-result"><FileCheck2 /><div><b>等待政府承辦端審批</b><p>文件已由小農送審，審批與補件意見會保留在操作紀錄。</p></div></div>}
         <div className="greenfin-field-grid">{documentDetail.fields.map((field) => { const editable = documentDetail.document.status === "OCR_COMPLETED" || documentDetail.document.status === "FIELDS_CONFIRMED"; const lowConfidence = field.confidence != null && field.confidence < .5; return <label className={lowConfidence ? "needs-review" : ""} key={field.id}><span>{field.field_name}<em>{field.confidence == null ? "人工輸入" : `OCR ${Math.round(field.confidence * 100)}%`}</em></span><input value={fieldDraft[field.id] ?? ""} readOnly={!editable} placeholder={lowConfidence ? "此欄位需要補件確認" : "請確認欄位內容"} onChange={(event) => setFieldDraft((current) => ({ ...current, [field.id]: event.target.value }))} />{field.normalized_value && <small>標準化：{field.normalized_value}</small>}</label>; })}</div>
@@ -4636,7 +4638,7 @@ function FarmerGreenFinPage({ busy, csrfToken, role, onUpload, onChanged, onToas
     </>}
     {section === "actions" && <><Panel className="span-5" title="新增綠色行動" note="行動等級基礎值為 20／50／100；須附已核驗佐證，實際認列依來源等級"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/actions", "POST", actionDraft, "綠色行動已建立").then(() => setActionDraft((current) => ({ ...current, description: "", evidenceRecordIds: [] }))); }}><label>構面<select value={actionDraft.dimension} onChange={(event) => setActionDraft((current) => ({ ...current, dimension: event.target.value }))}>{["減量", "增匯", "循環", "綠色治理"].map((value) => <option key={value}>{value}</option>)}</select></label><label>行動等級<select value={actionDraft.actionLevel} onChange={(event) => setActionDraft((current) => ({ ...current, actionLevel: event.target.value }))}><option value="BASIC">單次基礎行為・20</option><option value="SUSTAINED">持續性措施・50</option><option value="CERTIFIED">正式驗證／重大投入・100</option></select></label><label>執行日期<input type="date" value={actionDraft.actionDate} max={localDateInput()} onChange={(event) => setActionDraft((current) => ({ ...current, actionDate: event.target.value }))} /></label><fieldset className="greenfin-evidence-picker"><legend>佐證文件（必選，須已完成核驗）</legend>{evidenceRecords.length ? evidenceRecords.map((record) => <label key={record.id} className="greenfin-evidence-option"><input type="checkbox" checked={actionDraft.evidenceRecordIds.includes(record.id)} onChange={(event) => setActionDraft((current) => ({ ...current, evidenceRecordIds: event.target.checked ? [...current.evidenceRecordIds, record.id] : current.evidenceRecordIds.filter((id) => id !== record.id) }))} /><span>{record.original_name}<small>{greenFinDomains.find(([key]) => key === record.domain)?.[1] ?? record.domain}・{record.source_level}</small></span></label>) : <p className="empty-copy">尚無已核驗文件，請先到「文件與 OCR」完成上傳與來源核驗。</p>}</fieldset><label>說明<textarea required maxLength={500} value={actionDraft.description} onChange={(event) => setActionDraft((current) => ({ ...current, description: event.target.value }))} /></label><button className="button button-primary button-block" disabled={working || !actionDraft.description.trim() || !actionDraft.evidenceRecordIds.length}>建立綠色行動</button></form></Panel><Panel className="span-7" title="行動紀錄" note={`${actions.filter((item) => item.is_active).length} 筆有效行動`}><div className="evidence-list">{actions.length ? actions.map((item) => <Evidence key={item.id} title={`${item.dimension}・${item.description}`} note={`${item.action_level}・${item.action_date}${(JSON.parse(item.evidence_record_ids_json || "[]") as string[]).length ? "" : "・無佐證，不認列經驗值"}`} done={Boolean(item.is_active) && (JSON.parse(item.evidence_record_ids_json || "[]") as string[]).length > 0} />) : <p className="empty-copy">尚未建立綠色行動。</p>}</div></Panel></>}
     {section === "authorizations" && <><Panel className="span-5" title="建立機構授權" note="授權可隨時撤銷；單次期間最長 366 天"><form className="farmer-evidence-upload" onSubmit={(event) => { event.preventDefault(); void mutate("/api/greenfin/authorizations", "POST", authorizationDraft, "GreenFin 機構授權已建立"); }}><label>授權機構<select required value={authorizationDraft.institutionId} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, institutionId: event.target.value }))}><option value="">請選擇機構</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}</select></label><label>授權目的<textarea required maxLength={500} value={authorizationDraft.purpose} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, purpose: event.target.value }))} /></label><div className="form-grid"><label>開始日期<input type="date" value={authorizationDraft.startAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, startAt: event.target.value }))} /></label><label>到期日期<input type="date" min={authorizationDraft.startAt} value={authorizationDraft.expireAt} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, expireAt: event.target.value }))} /></label></div><fieldset><legend>資料範圍</legend>{[["EXPERIENCE", "綠色經驗值"], ["INDICATORS", "四大指標"], ["DATA_HEALTH", "Data Health"]].map(([value, label]) => <label key={value}><input type="checkbox" checked={authorizationDraft.dataScope.includes(value)} onChange={(event) => setAuthorizationDraft((current) => ({ ...current, dataScope: event.target.checked ? [...current.dataScope, value] : current.dataScope.filter((scope) => scope !== value) }))} />{label}</label>)}</fieldset><button className="button button-primary button-block" disabled={working || !authorizationDraft.institutionId || !authorizationDraft.dataScope.length}>建立限期授權</button></form></Panel><Panel className="span-7" title="授權紀錄" note="機構、資料範圍、期間與撤銷狀態均由後端檢核"><div className="evidence-list">{authorizations.length ? authorizations.map((item) => { const scopes = JSON.parse(item.data_scope_json) as string[]; const active = item.status === "ACTIVE" && !item.revoked_at && new Date(item.expire_at).valueOf() > currentTime; return <article className="evidence-item" key={item.id}><div><strong>{item.institution_name}</strong><small>{item.purpose}</small><small>{scopes.map((scope) => greenFinScopeLabels[scope] ?? scope).join("・")}・{item.start_at.slice(0, 10)} 至 {item.expire_at.slice(0, 10)}</small></div><div className="inline-actions"><span className={`status-pill ${active ? "" : "waiting"}`}>{active ? "有效" : item.status === "REVOKED" ? "已撤銷" : "已到期"}</span>{active && <button type="button" className="text-button" onClick={() => { if (window.confirm(`確認撤銷對 ${item.institution_name} 的 GreenFin 授權？`)) void mutate(`/api/greenfin/authorizations?authorizationId=${encodeURIComponent(item.id)}`, "DELETE", {}, "GreenFin 授權已撤銷"); }}>撤銷</button>}</div></article>; }) : <p className="empty-copy">尚未建立任何機構授權。</p>}</div></Panel></>}
-    {section !== "documents" && section !== "actions" && section !== "authorizations" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : "依 GREENFIN_DEMO_V1 重新計算"}</button></Panel>}
+    {section !== "documents" && section !== "actions" && section !== "authorizations" && <Panel className="span-12" title="重新計算" note="只使用後端規則與已核驗資料；結果保留規則版本與證據追溯"><button className="button button-primary" disabled={working} onClick={() => void mutate("/api/greenfin/results", "POST", {}, "GreenFin 三類結果已重新計算")}>{working ? "計算中…" : `依 ${formatRuleVersion(summary?.ruleVersion)} 重新計算`}</button></Panel>}
   </div>;
 }
 
@@ -4756,14 +4758,14 @@ function InstitutionGreenFinPage({ csrfToken, role, onToast }: { csrfToken: stri
   const experienceTotal = experience.reduce((sum, row) => sum + Number(row.effective_value ?? 0), 0);
   const reviewedStatus = (document: GreenFinDocumentRow) => document.review_decision || (["APPROVED", "REJECTED"].includes(document.status) ? document.status : "");
   return <div className="dashboard-grid">
-    {canReviewDocuments && <Panel className="span-12 subpage-primary" title="政府端 GreenFin 文件審批" note="政府承辦端可查看原始資料、下載文件並核准或退回補件；示範資料標示 DEMO／SIMULATED">
+    {canReviewDocuments && <Panel className="span-12 subpage-primary" title="政府端 GreenFin 文件審批" note="政府承辦端可查看原始資料、下載文件並核准或退回補件">
       <div className="portfolio-summary"><article><strong>{submissions.filter((item) => !reviewedStatus(item) || reviewedStatus(item) === "PENDING").length} 份</strong><span>待審批</span></article><article><strong>{submissions.filter((item) => reviewedStatus(item) === "APPROVED").length} 份</strong><span>已核准</span></article><article><strong>{submissions.filter((item) => reviewedStatus(item) === "REJECTED").length} 份</strong><span>已退回</span></article><article><strong>{submissions.length} 份</strong><span>繳交總數</span></article></div>
     </Panel>}
     {canReviewDocuments && <Panel className="span-12" title="小農文件繳交清單" note="包含待審批與已審批文件；OCR 欄位與政府意見各自留存">
       {submissions.length ? <div className="evidence-list">{submissions.map((document) => <article className={`evidence-item greenfin-document-row ${submissionDetail?.document.id === document.id ? "selected" : ""}`} key={document.id}><div><strong>{document.original_name}</strong><small>{document.farmer_name ?? document.farmer_id}・{document.city ?? ""}{document.district ?? ""}・{greenFinDomains.find(([key]) => key === document.domain)?.[1] ?? document.domain}</small><span className={`status-pill ${reviewedStatus(document) === "APPROVED" ? "" : "waiting"}`}>{reviewedStatus(document) === "APPROVED" ? "政府已核准" : reviewedStatus(document) === "REJECTED" ? "政府退回補件" : "待政府審批"}</span></div><button className="button button-secondary" disabled={working} onClick={() => void openSubmission(document.id)}>查看與審批</button></article>)}</div> : <p className="empty-copy">目前沒有小農繳交的 GreenFin 文件。</p>}
     </Panel>}
     {canReviewDocuments && submissionDetail && <Panel className="span-12 greenfin-document-workspace" title="繳交資料與審批" note={`${submissionDetail.document.farmer_name ?? submissionDetail.document.farmer_id}・${greenFinDomains.find(([key]) => key === submissionDetail.document.domain)?.[1] ?? submissionDetail.document.domain}`}>
-      <div className="greenfin-document-head"><div><span className="eyebrow">GOVERNMENT REVIEW{(submissionDetail.document.original_name.includes("DEMO") || submissionDetail.document.upload_note?.includes("DEMO")) ? "・DEMO／SIMULATED" : ""}</span><h3>{submissionDetail.document.original_name}</h3><p>{submissionDetail.document.upload_note || "小農未填寫文件說明"}</p><small>{submissionDetail.document.file_size ? `${(submissionDetail.document.file_size / 1024).toFixed(1)} KB` : ""}・{submissionDetail.document.mime_type ?? "原始文件"}</small></div><span className={`status-pill ${submissionDetail.reviewState === "APPROVED" ? "" : "waiting"}`}>{submissionDetail.reviewState === "APPROVED" ? "政府已核准" : submissionDetail.reviewState === "REJECTED" ? "政府退回補件" : "待政府審批"}</span></div>
+      <div className="greenfin-document-head"><div><span className="eyebrow">GOVERNMENT REVIEW</span><h3>{submissionDetail.document.original_name}</h3><p>{submissionDetail.document.upload_note || "小農未填寫文件說明"}</p><small>{submissionDetail.document.file_size ? `${(submissionDetail.document.file_size / 1024).toFixed(1)} KB` : ""}・{submissionDetail.document.mime_type ?? "原始文件"}</small></div><span className={`status-pill ${submissionDetail.reviewState === "APPROVED" ? "" : "waiting"}`}>{submissionDetail.reviewState === "APPROVED" ? "政府已核准" : submissionDetail.reviewState === "REJECTED" ? "政府退回補件" : "待政府審批"}</span></div>
       {submissionDetail.review && <div className={`greenfin-verification-result ${submissionDetail.review.decision === "REJECTED" ? "review-rejected" : ""}`}><BadgeCheck /><div><b>{submissionDetail.review.decision === "APPROVED" ? "最近審批：核准" : "最近審批：退回補件"}</b><p>{submissionDetail.review.reviewNote || "未填寫額外說明"}</p></div></div>}
       <label className="greenfin-review-note">政府審批意見<textarea rows={3} maxLength={1000} value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} placeholder="核准可填寫備註；退回時請具體說明需要補交或更正的內容" /></label>
       <div className="greenfin-document-actions"><button className="button button-secondary" onClick={() => setSubmissionDetail(null)}>關閉</button><button className="button button-secondary" disabled={working} onClick={() => void downloadSubmission(submissionDetail.document)}><Download />下載原始文件</button><button className="button button-secondary" disabled={working || !reviewNote.trim()} onClick={() => void reviewSubmission("REJECTED")}>退回補件</button><button className="button button-primary" disabled={working} onClick={() => void reviewSubmission("APPROVED")}><Check />核准文件</button></div>
@@ -4851,7 +4853,6 @@ function InstitutionPortfolioPage({
   const supportedFarmers = new Set(resourceRedemptions.map((item) => item.farmerId)).size;
   const verifiedOutcomes = outcomes.filter((item) => item.status === "verified");
   const carbonKg = verifiedOutcomes.reduce((sum, item) => sum + Number(item.carbonKg ?? 0), 0);
-  const hasDemoCarbon = verifiedOutcomes.some((item) => /DEMO|SIMULATED|MOCK/i.test(item.note));
   const [procurementTitle, setProcurementTitle] = useState("員工永續福利小農箱");
   const [procurementCategory, setProcurementCategory] = useState("友善農產箱");
   const [procurementQuantity, setProcurementQuantity] = useState(200);
@@ -4875,7 +4876,7 @@ function InstitutionPortfolioPage({
         {programs.length === 0 ? <div className="empty-receipt"><span><PackageCheck /></span><h3>尚未建立綠點激勵計畫</h3><p>建立後只會顯示在目前登入單位的後台。</p></div> : <div className="incentive-grid">{programs.map((program) => <article className="incentive-card" key={program.id}><header><span>{program.esg}</span><b>{program.name}</b><small>{program.sponsor}</small></header><p>{program.action}</p><div className="incentive-data"><span>回饋方式<b>{program.reward}</b></span><span>計畫預算<b>{program.budgetPoints.toLocaleString()} 點</b></span><span>參與對象<b>{program.participants}</b></span></div><div className="progress"><span style={{ width: `${program.progress}%` }} /></div><small>{program.progress === 0 ? "新建立・尚未開始" : `年度目標達成 ${program.progress}%`}</small></article>)}</div>}
       </Panel>
       <Panel className="span-12" title="ESG 可揭露成果" note="平台協助累積行動、點數流向與地方效益證據；正式評等仍依各揭露準則與評鑑機構認定">
-        <div className="table-wrap"><table className="mobile-card-table esg-table"><thead><tr><th>成果面向</th><th>可揭露指標</th><th>目前成果</th><th>佐證方式</th></tr></thead><tbody><tr><td>氣候行動</td><td>已驗證成果估算減碳</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e{hasDemoCarbon ? "（含 DEMO／SIMULATED）" : ""}</td><td>成果審核紀錄</td></tr><tr><td>責任消費</td><td>激勵計畫參與</td><td>{participantTotal.toLocaleString()} 人次</td><td>本帳戶計畫資料</td></tr><tr><td>地方共好</td><td>農業資源履約涉及小農</td><td>{supportedFarmers} 戶</td><td>資源兌換紀錄</td></tr><tr><td>永續經濟</td><td>農業資源回流</td><td>{resourceRedemptions.reduce((sum, item) => sum + item.points, 0).toLocaleString()} 點</td><td>農會兌換紀錄</td></tr></tbody></table></div>
+        <div className="table-wrap"><table className="mobile-card-table esg-table"><thead><tr><th>成果面向</th><th>可揭露指標</th><th>目前成果</th><th>佐證方式</th></tr></thead><tbody><tr><td>氣候行動</td><td>已驗證成果估算減碳</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e</td><td>成果審核紀錄</td></tr><tr><td>責任消費</td><td>激勵計畫參與</td><td>{participantTotal.toLocaleString()} 人次</td><td>本帳戶計畫資料</td></tr><tr><td>地方共好</td><td>農業資源履約涉及小農</td><td>{supportedFarmers} 戶</td><td>資源兌換紀錄</td></tr><tr><td>永續經濟</td><td>農業資源回流</td><td>{resourceRedemptions.reduce((sum, item) => sum + item.points, 0).toLocaleString()} 點</td><td>農會兌換紀錄</td></tr></tbody></table></div>
       </Panel>
     </div>
   );
@@ -4980,12 +4981,11 @@ function InstitutionReportPage({
   const participants = programs.reduce((sum, program) => sum + Number(program.participants.replace(/[^0-9]/g, "") || 0), 0);
   const verified = outcomes.filter((report) => report.status === "verified");
   const carbonKg = verified.reduce((sum, report) => sum + Number(report.carbonKg ?? 0), 0);
-  const demoVerifiedCount = verified.filter((report) => /DEMO|SIMULATED|MOCK/i.test(report.note)).length;
   const farmerCount = new Set(resourceRedemptions.map((item) => item.farmerId)).size;
   const reportData = programs.length ? programs.map((program) => ({ name: program.name, funds: program.budgetPoints })) : [{ name: "尚無計畫", funds: 0 }];
   return (
     <>
-      <div className="metrics"><Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} /><Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶資料" /><Metric icon={Sprout} value={`${farmerCount} 戶`} label="履約涉及小農" delta={`${resourceRedemptions.length} 筆兌換`} /><Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={demoVerifiedCount ? `含 ${demoVerifiedCount} 筆 DEMO` : `${verified.length} 筆成果`} detail={demoVerifiedCount ? "SIMULATED・非實際量測" : undefined} /></div>
+      <div className="metrics"><Metric icon={HandCoins} value={`${totalBudget.toLocaleString()} 點`} label="計畫綠點預算" delta={`${programs.length} 項計畫`} /><Metric icon={Users} value={participants.toLocaleString()} label="計畫參與人次" delta="依帳戶資料" /><Metric icon={Sprout} value={`${farmerCount} 戶`} label="履約涉及小農" delta={`${resourceRedemptions.length} 筆兌換`} /><Metric icon={Trees} value={`${(carbonKg / 1000).toLocaleString()} 噸`} label="已驗證減碳成果" delta={`${verified.length} 筆成果`} /></div>
       <div className="dashboard-grid">
         <Panel className="span-12 outcome-review-panel" title="小農成果回報審核" note="核對節水、減碳與受益資料後，通過的成果會更新至資訊揭露與 ESG 報告">
           {outcomes.length === 0 ? <div className="empty-receipt"><span><FileCheck2 /></span><h3>目前沒有待審成果</h3><p>小農送出改善專案成果後會顯示在這裡。</p></div> : <div className="outcome-review-list">{outcomes.map((report) => {
@@ -4995,7 +4995,7 @@ function InstitutionReportPage({
         </Panel>
         <Panel className="span-8 subpage-primary" title="綠點激勵投入" note="目前登入單位各項計畫預算"><div className="institution-budget-desktop"><Chart><BarChart data={reportData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} minTickGap={0} height={42} tickMargin={8} tick={{ fontSize: 12 }} tickFormatter={(value) => institutionBudgetLabel(String(value))} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="funds" name="計畫預算" fill="#2d7250" radius={[8, 8, 0, 0]} /></BarChart></Chart></div><InstitutionMobileBudgetChart data={reportData} /></Panel>
         <Panel className="span-4" title="ESG 成果摘要" note="供銀行、政府與企業揭露及持續追蹤"><div className="report-highlights"><div><span><Trees /></span><p><b>環境面</b><small>節能家電、低碳交通、節水與減藥行動持續累積</small></p></div><div><span><Users /></span><p><b>社會面</b><small>在地小農收入、農業資源與地方供應鏈受益</small></p></div><div><span><PackageCheck /></span><p><b>治理面</b><small>點數來源、流向、履歷與成果保留可追溯紀錄</small></p></div></div></Panel>
-        <Panel className="span-12" title="可揭露成果範圍" note="平台提供績效證據；正式 ESG 評分仍依採用準則及評鑑機構認定" action={<button className="button button-primary" onClick={onDownload}><Download />下載平台範例 PDF</button>}><div className="pdf-report-preview"><span>PDF</span><div><b>平台範例：綠色消費與在地小農影響力摘要</b><small>{demoVerifiedCount ? "下方本帳戶表格含 DEMO／SIMULATED 成果，非實際量測；PDF 為固定範例，不含本帳戶資料。" : "PDF 為固定範例，不含本帳戶資料；下方表格依目前登入單位資料顯示。"}</small></div><em>GFES SAMPLE REPORT</em></div><div className="table-wrap"><table className="mobile-card-table report-table"><thead><tr><th>成果面向</th><th>本期成果</th><th>資料來源</th><th>更新頻率</th></tr></thead><tbody><tr><td>綠點激勵參與</td><td>{participants.toLocaleString()} 人次</td><td>本帳戶激勵計畫</td><td>即時</td></tr><tr><td>計畫綠點預算</td><td>{totalBudget.toLocaleString()} 點</td><td>本帳戶計畫紀錄</td><td>即時</td></tr><tr><td>履約涉及小農</td><td>{farmerCount} 戶</td><td>農業資源兌換紀錄</td><td>即時</td></tr><tr><td>已驗證減碳成果</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e{demoVerifiedCount ? "（含 DEMO／SIMULATED）" : ""}</td><td>通過審核的成果回報</td><td>每次審核</td></tr></tbody></table></div></Panel>
+        <Panel className="span-12" title="可揭露成果範圍" note="平台提供績效證據；正式 ESG 評分仍依採用準則及評鑑機構認定" action={<button className="button button-primary" onClick={onDownload}><Download />下載平台範例 PDF</button>}><div className="pdf-report-preview"><span>PDF</span><div><b>平台範例：綠色消費與在地小農影響力摘要</b><small>PDF 為固定範例，不含本帳戶資料；下方表格依目前登入單位資料顯示。</small></div><em>GFES SAMPLE REPORT</em></div><div className="table-wrap"><table className="mobile-card-table report-table"><thead><tr><th>成果面向</th><th>本期成果</th><th>資料來源</th><th>更新頻率</th></tr></thead><tbody><tr><td>綠點激勵參與</td><td>{participants.toLocaleString()} 人次</td><td>本帳戶激勵計畫</td><td>即時</td></tr><tr><td>計畫綠點預算</td><td>{totalBudget.toLocaleString()} 點</td><td>本帳戶計畫紀錄</td><td>即時</td></tr><tr><td>履約涉及小農</td><td>{farmerCount} 戶</td><td>農業資源兌換紀錄</td><td>即時</td></tr><tr><td>已驗證減碳成果</td><td>{(carbonKg / 1000).toLocaleString()} 噸 CO₂e</td><td>通過審核的成果回報</td><td>每次審核</td></tr></tbody></table></div></Panel>
       </div>
     </>
   );
