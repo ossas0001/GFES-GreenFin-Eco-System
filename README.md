@@ -19,6 +19,13 @@ GreenFin 的經驗值、四大分析指標與 Data Health 彼此獨立，均不�
 
 部署資源、驗證結果與剩餘選用憑證請見 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
+## 展示影片
+
+- [GFES 操作介紹（1080p）](media/videos/GFES_操作介紹_1080p.mp4)
+- [GFES 完整版（含字幕，1440p）](media/videos/GFES_完整版_字幕_1440p.mp4)
+
+影片原檔以 Git LFS 儲存。若使用 `git clone` 下載專案，請先安裝 Git LFS，才能取得影片原檔。
+
 ## 四種平台角色
 
 - 消費者：從消費、節能家電、交通、電子帳單與激勵任務取得綠點，優先支持或兌換附近小農。

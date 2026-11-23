@@ -1,0 +1,6 @@
+2026-11-23 — Add two GFES demonstration videos
+
+- Grounded the two user-provided Drive URLs and downloaded the actual linked MP4 files. The first URL's visible label differed from its target; the target file ID was used.
+- Based the change on current GitHub main commit 24c64f5 in a separate review branch.
+- Added the 1080p introduction and 1440p captioned full video under media/videos, tracked by Git LFS, and linked them from README.
+- Validation and remote publication are recorded in logs/test-results/2026-11-23-videos.md.
